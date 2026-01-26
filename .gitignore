@@ -1,0 +1,34 @@
+# Config personal (NO commitear)
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build
+dist/
+build/
+.next/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Test coverage
+coverage/

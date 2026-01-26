@@ -1,0 +1,43 @@
+{
+  "project": {
+    "name": "[NOMBRE]",
+    "description": "[Descripción breve de la aplicación]",
+    "stack": "[Backend/Frontend/DB]"
+  },
+  "language": {
+    "code": "en",
+    "chat": "es"
+  },
+  "commands": {
+    "packageManager": "npm",
+    "test": "npm test",
+    "lint": "npm run lint",
+    "dev": "npm run dev",
+    "build": "npm run build"
+  },
+  "git": {
+    "branchPrefixes": {
+      "feature": "feature/",
+      "fix": "fix/",
+      "hotfix": "hotfix/"
+    },
+    "mainBranch": "main"
+  },
+  "conventions": {
+    "files": "kebab-case",
+    "classes": "PascalCase",
+    "functions": "camelCase",
+    "constants": "UPPER_SNAKE_CASE",
+    "commits": "conventional"
+  },
+  "structure": {
+    "src": "src/",
+    "tests": "tests/",
+    "docs": "docs/"
+  },
+  "mcp": {
+    "installed": [],
+    "suggested": []
+  },
+  "initialized": false
+}
