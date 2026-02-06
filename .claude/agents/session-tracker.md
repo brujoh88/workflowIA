@@ -11,6 +11,7 @@ Manages the session tracking system.
 
 2. **Commit Documentation**
    - Register commits in `.pending-commits.log`
+   - Manage commit states: `PENDING` → `PROCESSED` | `DOCUMENTED`
    - Clean log after successful push
 
 3. **File Maintenance**
@@ -21,6 +22,27 @@ Manages the session tracking system.
 4. **BACKLOG Synchronization**
    - Verify consistency between sessions and BACKLOG
    - Report orphan items
+   - Mark BACKLOG items with session references
+
+## Pending Commits Log Management
+
+### Format
+```
+STATUS|DATE|HASH|BRANCH|MESSAGE
+```
+
+### States
+| State | Meaning | Transition |
+|-------|---------|------------|
+| `PENDING` | Commit registered, not yet documented | → PROCESSED (on /finish) |
+| `PROCESSED` | Included in session summary | → (archived with session) |
+| `DOCUMENTED` | Auto-docs commit, no action needed | → (stays) |
+
+### Anti-Loop Protection
+When creating administrative commits (session updates, context docs), the commit message MUST use:
+- `docs(context): ...` or `chore(session): ...` prefixes
+- These are auto-marked as `DOCUMENTED` by the post-commit hook
+- This prevents infinite loops of tracking commits about tracking
 
 ## Session Structure
 
@@ -33,6 +55,11 @@ Manages the session tracking system.
 
 ## Objective
 {Clear description of the objective}
+
+## BACKLOG Items Addressed
+| Item | Status | Notes |
+|------|--------|-------|
+| **[scope]** description | [ ] Pending / [~] Partial / [x] Done | Details |
 
 ## Initial Context
 {Code state at start}
@@ -47,7 +74,11 @@ Manages the session tracking system.
 {Items that arise during work}
 
 ## Final Summary (on completion)
-{Summary of changes, tests, files}
+- **End**: {timestamp}
+- **Duration**: {calculated}
+- **Commits**: {count}
+- **Modified files**: {list}
+- **BACKLOG items completed**: {count}
 ```
 
 ## Available Commands
@@ -87,6 +118,15 @@ Clean pending commits (after push)
 2. **Session required for commit** - `/finish` requires active session
 3. **Automatic archiving** - COMPLETED sessions move to archive
 4. **ID format**: `YYYYMMDD-HHMM-{feature-name}`
+5. **Anti-loop commits** - Administrative commits use `docs(context):` or `chore(session):` prefix
+
+## Rotation Rules
+
+| Trigger | Action |
+|---------|--------|
+| >3 completed blocks in COMPLETED.md | Summarize oldest blocks to quarterly SUMMARY.md |
+| >15 archived sessions in a quarter | Generate quarterly summary, compress old sessions |
+| Feature reaches 100% | Consolidate to `context/consolidated/{feature}.md` |
 
 ## File Locations
 
@@ -101,7 +141,7 @@ Clean pending commits (after push)
 ## Integration with Skills
 
 - `/start` → Calls create session
-- `/finish` → Calls close session + archive
+- `/finish` → Calls close session + archive + update pending-commits
 
 ## Flow Example
 
@@ -116,8 +156,9 @@ Clean pending commits (after push)
 
 4. User: /finish
 5. Session-tracker:
-   - Closes session with summary
+   - Closes session with summary and metadata
+   - Marks BACKLOG items [x] with session reference
    - Moves to archive/2026-Q1/sessions/
    - Updates COMPLETED.md
-   - Registers commit in .pending-commits.log
+   - Marks .pending-commits.log entries as PROCESSED
 ```

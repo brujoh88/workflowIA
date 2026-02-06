@@ -1,0 +1,27 @@
+#!/bin/sh
+# post-commit hook: Auto-register commits in context/.pending-commits.log
+# Format: STATUS|DATE|HASH|BRANCH|MESSAGE
+
+LOG_FILE="context/.pending-commits.log"
+
+# Get commit info
+HASH=$(git log -1 --format="%h")
+BRANCH=$(git branch --show-current)
+MESSAGE=$(git log -1 --format="%s")
+DATE=$(date +"%Y-%m-%d %H:%M:%S")
+
+# Determine status: documentation commits are auto-marked DOCUMENTED
+case "$MESSAGE" in
+  docs\(context\):*|chore\(session\):*|docs\(session\):*|chore\(context\):*)
+    STATUS="DOCUMENTED"
+    ;;
+  *)
+    STATUS="PENDING"
+    ;;
+esac
+
+# Ensure log file exists
+mkdir -p "$(dirname "$LOG_FILE")"
+
+# Append entry
+echo "${STATUS}|${DATE}|${HASH}|${BRANCH}|${MESSAGE}" >> "$LOG_FILE"

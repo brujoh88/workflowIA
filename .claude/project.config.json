@@ -35,6 +35,14 @@
     "tests": "tests/",
     "docs": "docs/"
   },
+  "workflow": {
+    "maxFileLines": 400,
+    "maxFunctionLines": 50,
+    "archiveRotationThreshold": 15,
+    "blockRotationThreshold": 3,
+    "preImplementationChecklist": true,
+    "roadmapEnabled": true
+  },
   "mcp": {
     "installed": [],
     "suggested": []

@@ -92,7 +92,15 @@ Replace placeholders in `CLAUDE.md`:
 | `[Descripción breve de la aplicación]` | project.description |
 | Hardcoded commands | Use values from commands.* |
 
-### 5. Create Folder Structure
+### 5. Install Git Hooks
+
+```bash
+cp scripts/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/post-commit
+```
+
+This installs the post-commit hook that auto-registers commits in `context/.pending-commits.log`.
+
+### 6. Create Folder Structure
 
 If they don't exist, create configured folders:
 - `{structure.src}`
@@ -101,7 +109,7 @@ If they don't exist, create configured folders:
 - `context/tmp/`
 - `context/archive/{year}-Q{quarter}/sessions/`
 
-### 6. Suggest MCP Servers
+### 7. Suggest MCP Servers
 
 Based on `project.stack` and `project.description`, suggest relevant MCPs:
 
@@ -127,7 +135,7 @@ Ask user:
 
 If user wants to install, run `/mcp install` flow for each selected.
 
-### 7. Final Summary
+### 8. Final Summary
 
 Show summary of applied configuration:
 

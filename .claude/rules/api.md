@@ -8,10 +8,10 @@ paths:
 # Reglas de API
 
 ## Estructura de URLs
-- Base: `/api/v1/[recurso]`
-- Plural para colecciones: `/api/v1/users`
-- Singular con ID: `/api/v1/users/:id`
-- Acciones: `/api/v1/users/:id/activate`
+- Base: `/api/[version]/[recurso]` (e.g., `/api/v1/`)
+- Plural para colecciones: `/api/{v}/users`
+- Singular con ID: `/api/{v}/users/:id`
+- Acciones: `/api/{v}/users/:id/activate`
 
 ## Formato de Respuestas
 

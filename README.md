@@ -5,14 +5,20 @@
 
 **[Leer en Español](README.es.md)**
 
-A configurable project template for AI-assisted development with Claude Code. Provides session tracking, structured workflows, and development traceability out of the box.
+A battle-tested project template for AI-assisted development with Claude Code. Provides session tracking, structured workflows, 9 specialized agents, and full development traceability out of the box. Born from 45+ real development sessions.
 
 ## Features
 
 - **Interactive Setup Wizard** (`/setup`) - Configure your project with guided prompts
 - **Session Tracking** - Document every development session automatically
 - **Structured Workflow** - Start and finish features with `/start` and `/finish`
-- **Configurable Everything** - Package manager, commands, git conventions, languages
+- **9 Specialized Agents** - Context provider, feature architect, test engineer, and more
+- **Multi-Category Code Review** - Structured audits with READY/PENDING/CONDITIONAL verdicts
+- **BACKLOG + ROADMAP Tracking** - Bidirectional consistency between sessions and backlog items
+- **Post-Commit Hook** - Automatic commit registration in pending log
+- **Architecture Reference** - Auto-loaded patterns for structural consistency
+- **Archive Rotation** - Automatic cleanup of completed sessions and history
+- **Configurable Everything** - Package manager, commands, git conventions, languages, thresholds
 - **MCP Integration** - Search, explore and install MCP servers
 - **Bilingual Support** - Code and chat language preferences
 
@@ -42,12 +48,20 @@ Open Claude Code and run:
 /setup
 ```
 
+This will:
+- Collect project metadata, stack, and preferences
+- Configure commands and git conventions
+- Install the post-commit hook for automatic commit tracking
+- Create folder structure
+- Suggest relevant MCP servers
+
 ### 4. Start Developing
 
 ```
-/start my-feature    # Creates branch + session tracking
+/start my-feature    # Creates branch + session + loads context + updates BACKLOG
 ... your work ...
-/finish              # Runs tests + commits + archives session
+/review-code         # Multi-category code audit with verdict
+/finish              # Runs tests + commits + archives + updates ROADMAP
 ```
 
 ---
@@ -60,25 +74,32 @@ flowchart TD
     B --> C{Project Configured}
 
     C --> D["`/start feature-name`"]
-    D --> E[Creates feature branch]
-    E --> F[Creates session file]
-    F --> G[Updates BACKLOG]
+    D --> D1[Load Context Snapshot]
+    D1 --> D2[Check BACKLOG + ROADMAP]
+    D2 --> D3[Verify no duplicates]
+    D3 --> E[Creates feature branch]
+    E --> F[Suggest agents + structure]
+    F --> G[Creates session file]
     G --> H[Development Work]
 
-    H --> I{Need changes?}
-    I -->|Yes| H
+    H --> I{Need review?}
+    I -->|Yes| I2["`/review-code`"]
+    I2 --> I3{Verdict?}
+    I3 -->|READY| J
+    I3 -->|PENDING| H
     I -->|No| J["`/finish`"]
 
-    J --> K[Run tests]
+    J --> K[Run tests + lint]
     K --> L{Tests pass?}
     L -->|No| H
-    L -->|Yes| M[Run linter]
-    M --> N[Create commit]
-    N --> O[Archive session]
-    O --> P[Update COMPLETED.md]
-    P --> Q{More features?}
-    Q -->|Yes| D
-    Q -->|No| R[Done!]
+    L -->|Yes| M[Create commit]
+    M --> N[Mark BACKLOG items done]
+    N --> O[Update ROADMAP]
+    O --> P[Archive session]
+    P --> Q[Check rotation needed]
+    Q --> R{More features?}
+    R -->|Yes| D
+    R -->|No| S[Done!]
 ```
 
 ---
@@ -95,14 +116,35 @@ sequenceDiagram
     participant F as Files
 
     U->>C: /start user-auth
+    C->>F: Load context (BACKLOG, ROADMAP, sessions)
+    C->>F: Check BACKLOG for existing item
+    C->>G: Verify feature doesn't exist already
     C->>G: git checkout -b feature/user-auth
+    C->>F: Suggest relevant agents
+    C->>F: Propose feature structure
     C->>F: Create session file
-    C->>F: Update BACKLOG.md
-    C->>F: Update context/README.md
+    C->>F: Update BACKLOG.md + README
     C-->>U: Ready! Branch feature/user-auth
 ```
 
-### Scenario 2: Finishing a Feature Successfully
+### Scenario 2: Code Review
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Claude
+    participant F as Files
+
+    U->>C: /review-code
+    C->>F: Load session context
+    C->>F: Group changes by category
+    C->>F: Audit: Correctness, Security, Performance
+    C->>F: Audit: Tests, Documentation, Maintainability
+    C-->>U: Report with issues table + verdict
+    Note over U,C: READY / PENDING / CONDITIONAL
+```
+
+### Scenario 3: Finishing a Feature
 
 ```mermaid
 sequenceDiagram
@@ -113,33 +155,17 @@ sequenceDiagram
     participant F as Files
 
     U->>C: /finish
-    C->>T: npm test
+    C->>T: Run tests + lint
     T-->>C: All tests pass
-    C->>T: npm run lint
-    T-->>C: No issues
     C->>G: git add and commit
+    C->>F: Mark BACKLOG items [x] or [~]
+    C->>F: Verify Session ↔ BACKLOG consistency
+    C->>F: Update ROADMAP percentages
+    C->>F: Evaluate feature completeness
     C->>F: Archive session
-    C->>F: Update COMPLETED.md
-    C-->>U: Done! Commit abc123
-```
-
-### Scenario 3: Tests Fail
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant C as Claude
-    participant T as Tests
-
-    U->>C: /finish
-    C->>T: npm test
-    T-->>C: 2 tests failed
-    C-->>U: Tests failed! Fix first
-    Note over U,C: User fixes the code
-    U->>C: /finish
-    C->>T: npm test
-    T-->>C: All tests pass
-    C-->>U: Continuing with commit
+    C->>F: Check archive rotation
+    C->>F: Update pending-commits.log
+    C-->>U: Done! Feature 85% complete
 ```
 
 ### Scenario 4: Pausing Work
@@ -163,22 +189,83 @@ flowchart LR
 ```
 .
 ├── .claude/
-│   ├── project.config.json    # Project configuration
+│   ├── project.config.json       # Project configuration + workflow thresholds
+│   ├── settings.local.json       # Permissions (gitignored)
+│   ├── MANUAL.md                 # User guide for the framework
 │   ├── skills/
-│   │   ├── setup/             # Setup wizard
-│   │   ├── start/             # Start feature workflow
-│   │   ├── finish/            # Finish feature workflow
-│   │   └── mcp/               # MCP server management
-│   ├── agents/                # Specialized agents
-│   └── rules/                 # Context-specific rules
+│   │   ├── setup/                # Setup wizard
+│   │   ├── start/                # Start feature (context + BACKLOG + agents)
+│   │   ├── finish/               # Finish feature (tests + tracking + rotation)
+│   │   ├── review-code/          # Multi-category code audit
+│   │   ├── architecture-ref/     # Architecture patterns (auto-loaded)
+│   │   ├── explore-code/         # Code exploration
+│   │   ├── fix-issue/            # Bug fix workflow
+│   │   ├── deploy/               # Deployment workflow
+│   │   └── mcp/                  # MCP server management
+│   ├── agents/                   # 9 specialized agents
+│   │   ├── session-tracker.md    # Session lifecycle management
+│   │   ├── context-provider.md   # Project snapshot (quick/deep)
+│   │   ├── feature-architect.md  # Feature structure planning
+│   │   ├── code-reviewer.md      # Structured audit with verdicts
+│   │   ├── code-explorer.md      # Codebase navigation
+│   │   ├── test-engineer.md      # Test creation + coverage
+│   │   ├── db-analyst.md         # Database design + queries
+│   │   ├── api-documenter.md     # API documentation audit
+│   │   └── frontend-integrator.md # Component scaffolding + a11y
+│   └── rules/                    # Context-specific rules
+│       ├── api.md                # API conventions
+│       ├── database.md           # Database conventions
+│       └── frontend.md           # Frontend conventions
 ├── context/
-│   ├── README.md              # Session index
-│   ├── BACKLOG.md             # Task backlog
-│   ├── tmp/                   # Active sessions
-│   └── archive/               # Archived sessions
-├── CLAUDE.md                  # Project instructions for Claude
-└── CLAUDE.local.md            # Local config (gitignored)
+│   ├── README.md                 # Session index + rotation rules
+│   ├── BACKLOG.md                # Task backlog with completion markers
+│   ├── ROADMAP.md                # Module progress tracking
+│   ├── .pending-commits.log      # Auto-registered commits (via hook)
+│   ├── tmp/                      # Active sessions
+│   ├── archive/
+│   │   ├── COMPLETED.md          # History of completed items
+│   │   └── YYYY-QN/
+│   │       ├── sessions/         # Archived session files
+│   │       └── SUMMARY.md        # Quarterly summary
+│   └── consolidated/             # Per-feature documentation
+├── scripts/
+│   └── hooks/
+│       └── post-commit           # Auto-registers commits in pending log
+├── CLAUDE.md                     # Project instructions (routing + rules + agents)
+└── CLAUDE.local.md               # Local config (gitignored)
 ```
+
+## Agents
+
+9 specialized agents, each with a focused role:
+
+| Agent | Role | Invoked By |
+|-------|------|------------|
+| **session-tracker** | Session lifecycle, commit tracking, rotation | `/start`, `/finish` |
+| **context-provider** | Project snapshot (quick ~30s / deep ~2min) | `/start` (auto), direct |
+| **feature-architect** | Detect patterns, propose feature structure | `/start` (new features) |
+| **code-reviewer** | Multi-category audit with READY/PENDING/CONDITIONAL | `/review-code` |
+| **code-explorer** | Codebase navigation and understanding | `/explore-code` |
+| **test-engineer** | Test creation following AAA pattern + coverage | `/finish` (auto), direct |
+| **db-analyst** | Database design, queries, migrations | Direct delegation |
+| **api-documenter** | API documentation completeness audit | Direct delegation |
+| **frontend-integrator** | Component scaffolding + WCAG AA accessibility | Direct delegation |
+
+## Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `/setup` | Interactive configuration wizard (installs hooks) |
+| `/start <feature>` | Start feature with context loading + BACKLOG check + agent suggestion |
+| `/finish` | Tests + commit + BACKLOG/ROADMAP update + archive + rotation |
+| `/review-code` | Multi-category audit: Correctness, Security, Performance, Tests, Docs, Maintainability |
+| `/explore-code` | Navigate and understand codebase |
+| `/fix-issue` | Guided debugging workflow |
+| `/deploy` | Build, verify, and deploy |
+| `/mcp search <term>` | Search for MCP servers |
+| `/mcp install <name>` | Install and configure an MCP |
+| `/mcp suggest` | Get MCP suggestions based on your stack |
+| `/mcp list` | List installed MCPs |
 
 ## Configuration
 
@@ -212,60 +299,57 @@ All configuration is stored in `.claude/project.config.json`:
   },
   "conventions": {
     "files": "kebab-case",
-    "classes": "PascalCase",
-    "functions": "camelCase",
-    "constants": "UPPER_SNAKE_CASE",
     "commits": "conventional"
   },
-  "structure": {
-    "src": "src/",
-    "tests": "tests/",
-    "docs": "docs/"
-  },
-  "mcp": {
-    "installed": [],
-    "suggested": []
+  "workflow": {
+    "maxFileLines": 400,
+    "maxFunctionLines": 50,
+    "archiveRotationThreshold": 15,
+    "blockRotationThreshold": 3,
+    "preImplementationChecklist": true,
+    "roadmapEnabled": true
   },
   "initialized": true
 }
 ```
 
-## Available Commands
+## Enforced Rules
 
-| Command | Description |
-|---------|-------------|
-| `/setup` | Interactive configuration wizard |
-| `/start <feature>` | Start a new feature with branch and session |
-| `/finish` | Run tests, commit, and archive session |
-| `/mcp search <term>` | Search for MCP servers |
-| `/mcp info <name>` | Get detailed info about an MCP |
-| `/mcp install <name>` | Install and configure an MCP |
-| `/mcp suggest` | Get MCP suggestions based on your stack |
-| `/mcp list` | List installed MCPs |
+The framework enforces these development practices:
+
+| Rule | Description |
+|------|-------------|
+| **Debugging Protocol** | Formulate 3 hypotheses before modifying code to fix a bug |
+| **No Premature Action** | Read before writing, understand before changing, ask before assuming |
+| **Session Discipline** | Every `/start` creates a session; every `/finish` closes it |
+| **Code Size Limits** | ~400 lines/file, ~50 lines/function (configurable) |
+| **Bidirectional Consistency** | Session and BACKLOG must be in sync on `/finish` |
 
 ## Session States
 
 ```mermaid
 stateDiagram-v2
-    [*] --> IN_PROGRESS : start
+    [*] --> IN_PROGRESS : /start
     IN_PROGRESS --> IN_PROGRESS : Development
     IN_PROGRESS --> PAUSED : Interrupt work
     PAUSED --> IN_PROGRESS : Resume work
-    IN_PROGRESS --> COMPLETED : finish
+    IN_PROGRESS --> COMPLETED : /finish
     COMPLETED --> [*] : Archived
 ```
 
-| State | Description |
-|-------|-------------|
-| `IN_PROGRESS` | Active development work |
-| `PAUSED` | Work interrupted (document reason) |
-| `COMPLETED` | Finished and archived |
+## BACKLOG Markers
+
+| Marker | Meaning |
+|--------|---------|
+| `[ ]` | Pending - not started |
+| `[~]` | Partially completed |
+| `[x]` | Fully completed |
+
+Completed items include session references: `*(session-20260206-1430-feature-name)*`
 
 ## MCP Servers
 
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers extend Claude's capabilities by connecting to external tools and services.
-
-### Suggested MCPs
 
 During `/setup`, the wizard suggests MCPs based on your stack:
 
@@ -275,25 +359,6 @@ During `/setup`, the wizard suggests MCPs based on your stack:
 | GitHub | `@modelcontextprotocol/server-github` |
 | Docker | `mcp-server-docker` |
 | Slack | `@modelcontextprotocol/server-slack` |
-
-### Managing MCPs
-
-```bash
-# Search for MCPs
-/mcp search database
-
-# Get info about a specific MCP
-/mcp info @modelcontextprotocol/server-postgres
-
-# Install an MCP
-/mcp install @modelcontextprotocol/server-github
-
-# See suggestions for your project
-/mcp suggest
-
-# List installed MCPs
-/mcp list
-```
 
 MCPs are configured in `.claude/settings.local.json` (not committed to git).
 
@@ -315,16 +380,34 @@ allowed-tools: Bash, Read, Write, Edit
 Instructions for Claude to follow...
 ```
 
+### Adding Agents
+
+Create a new agent in `.claude/agents/your-agent.md`:
+
+```markdown
+# Agent: Your Agent Name
+
+## Responsibilities
+- What this agent does
+
+## Rules
+- Read-only / write access
+- When to invoke
+```
+
 ### Adding Rules
 
 Create context-specific rules in `.claude/rules/`:
 
 ```markdown
+---
+paths:
+  - "src/your-context/**"
+---
+
 # Rule Name
 
-When working on [context], follow these guidelines:
-- Guideline 1
-- Guideline 2
+Guidelines for this context...
 ```
 
 ## Requirements

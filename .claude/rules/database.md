@@ -1,7 +1,7 @@
 ---
 paths:
   - "src/database/**"
-  - "prisma/**"
+  - "db/**"
   - "**/*.sql"
 ---
 
