@@ -47,7 +47,8 @@
     "roadmapEnabled": true,
     "backlogMaxLines": 300,
     "recentSessionsToKeep": 3,
-    "coverageThreshold": 80
+    "coverageThreshold": 80,
+    "staleSessionThreshold": 24
   },
   "quality": {
     "externalSkills": []

@@ -25,17 +25,22 @@ Reads essential project state for rapid context loading.
 4. `context/FIXES.md` - Pending fixes (if exists)
 5. `.claude/MEMORY.md` - Lessons learned (if exists)
 6. Active session file in `context/tmp/session-*.md` (if any)
+   - For each active session: check age against `config.workflow.staleSessionThreshold` (default: 24h)
+   - If age > threshold: flag as **STALE** in output
 7. Recent git history: `git log --oneline -10`
 
 **Output format**:
 ```markdown
 ## Project Snapshot (Quick)
 
-**Active Session**: {session ID} on branch {branch} | None
+**Active Session**: {session ID} on branch {branch} | None | **STALE** ({N}h, threshold: {threshold}h)
 **BACKLOG**: {N} items in progress, {M} prioritized, {K} ideas
 **FIXES**: {N} pending, {M} in progress | Not configured
 **ROADMAP**: {module status summary} | Not configured
 **Recent Activity**: {last 3 commits summary}
+
+### Stale Sessions (if any)
+- **{session ID}**: active for {N}h (threshold: {threshold}h) — recommend closing or pausing
 
 ### Suggested Paths (Prioritized)
 1. **{action}** - {reason} (from {source: BACKLOG/ROADMAP/FIXES})

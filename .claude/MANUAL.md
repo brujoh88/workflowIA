@@ -1,12 +1,12 @@
 # WorkflowIA - User Manual
 
-Guide for using the workflowIA development framework (v2.0).
+Guide for using the workflowIA development framework (v2.1).
 
 ## Setup on New Machine
 
 1. **Clone the repository**
 2. **Run `/setup`** — Interactive wizard configures everything
-3. **Git hooks**: Setup configures `core.hooksPath` or copies hooks
+3. **Git hooks**: Setup configures `core.hooksPath` (installs pre-commit + post-commit hooks)
 4. **LSP**: Enable TypeScript plugin in `.claude/settings.json`
 5. **MEMORY.md**: Created during setup for persistent lessons
 
@@ -24,19 +24,22 @@ Guide for using the workflowIA development framework (v2.0).
 │   ├── YYYY-MM-DD-desc.md      # Active plans
 │   └── completados/             # Archived plans
 │       └── .gitkeep
+├── docs/                        # Framework documentation
+│   └── QUALITY-SKILLS-CONTRACT.md # Quality skill interface contract
 ├── skills/                      # Slash commands
 │   ├── setup/                   # /setup - Configuration wizard
 │   ├── start/                   # /start - Begin feature
 │   ├── finish/                  # /finish - End feature
 │   ├── review-code/             # /review-code - Code audit
-│   ├── audit/                   # /audit - System-wide audit (NEW)
+│   ├── audit/                   # /audit - System-wide audit
 │   ├── explore-code/            # /explore-code - Code exploration
 │   ├── fix-issue/               # /fix-issue - Bug fix workflow
 │   ├── deploy/                  # /deploy - Deployment
+│   ├── metrics/                 # /metrics - Project metrics dashboard (NEW)
 │   ├── mcp/                     # /mcp - MCP server management
 │   ├── architecture-ref/        # Auto-loaded architecture patterns
-│   ├── development-protocol-ref/ # Auto-loaded development protocol (NEW)
-│   └── ui-design-system-ref/    # Auto-loaded UI design reference (NEW)
+│   ├── development-protocol-ref/ # Auto-loaded development protocol
+│   └── ui-design-system-ref/    # Auto-loaded UI design reference
 ├── agents/                      # 9 specialized agents
 │   ├── session-tracker.md       # Session lifecycle + anti-loop commits
 │   ├── context-provider.md      # Project snapshot + suggested paths
@@ -64,7 +67,8 @@ Guide for using the workflowIA development framework (v2.0).
 | `/audit [module]` | System-wide audit | 8 modules: types, security, validation, size, coverage, docs, arch, quality |
 | `/explore-code` | Understand codebase | Navigate and understand code structure |
 | `/fix-issue` | Bug fix workflow | Guided debugging with 3 hypotheses |
-| `/deploy` | Deployment workflow | Build, verify, and deploy |
+| `/deploy` | Deployment workflow | Environment-aware deploy with pre/post checks |
+| `/metrics` | Project dashboard | Session, commit, BACKLOG, ROADMAP, and FIXES metrics |
 | `/mcp` | MCP server management | Search, install, configure MCP servers |
 
 ## Agents
@@ -75,7 +79,7 @@ Guide for using the workflowIA development framework (v2.0).
 | `db-analyst` | Schema design, migrations, queries, indexes | Direct delegation |
 | `code-explorer` | Codebase navigation and understanding | `/explore-code` |
 | `code-reviewer` | Standalone structured multi-category review | `/review-code` |
-| `context-provider` | Project snapshot, suggested paths, current summary | `/start` (auto), direct |
+| `context-provider` | Project snapshot, suggested paths, stale session detection | `/start` (auto), direct |
 | `feature-architect` | Feature structure, anatomy docs, size limits | `/start` (new features) |
 | `test-engineer` | Test creation with coverage BEFORE/AFTER protocol | `/finish` (auto), direct |
 | `api-documenter` | API documentation completeness audit | Direct delegation |
@@ -135,7 +139,7 @@ context/
 ├── README.md                    # Index of active sessions and status
 ├── BACKLOG.md                   # Prioritized pending items (<300 lines target)
 ├── ROADMAP.md                   # Module status and progress tracking
-├── FIXES.md                     # Centralized bug/fix registry (NEW)
+├── FIXES.md                     # Centralized bug/fix registry
 ├── .pending-commits.log         # Auto-registered commits (via hook)
 ├── tmp/                         # Active session files
 │   ├── session-*.md             # Active sessions
@@ -145,7 +149,7 @@ context/
 │   └── YYYY-QN/
 │       ├── sessions/            # Archived session files
 │       └── SUMMARY.md           # One-line per session summary
-├── auditorias/                  # Audit reports from /audit (NEW)
+├── auditorias/                  # Audit reports from /audit
 └── consolidated/                # Per finished feature documentation
 ```
 
@@ -194,8 +198,8 @@ All project settings live in `.claude/project.config.json`:
 - Commands (test, lint, dev, build, syncTypes)
 - Git configuration (branch prefixes, main/dev branch, coAuthoredBy)
 - Code conventions (naming, commits)
-- Workflow thresholds (max file lines, rotation triggers, coverage, BACKLOG max lines)
-- Quality settings (external skills)
+- Workflow thresholds (max file lines, rotation triggers, coverage, BACKLOG max lines, staleSessionThreshold)
+- Quality settings (external skills — see Quality Skills Contract)
 - MCP settings (installed, suggested)
 
 Run `/setup` to configure interactively.
@@ -210,6 +214,25 @@ Context7 provides up-to-date documentation for libraries:
 - `frontend-integrator` queries frontend framework patterns
 
 Requires Context7 MCP server to be installed.
+
+## Quality Skills Contract
+
+External quality skills can be integrated via `.claude/docs/QUALITY-SKILLS-CONTRACT.md`.
+
+- **What**: Specialized quality checks (accessibility, performance, design compliance)
+- **Interface**: Skills produce findings with severity/file/line/description
+- **Installation**: Symlink or copy to `.claude/skills/`, register in `config.quality.externalSkills`
+- **Integration**: Checked by `/review-code` (Step 1.5) and `/finish` (Step 0.5)
+- **Reference**: See `.claude/docs/QUALITY-SKILLS-CONTRACT.md` for full specification
+
+## Git Hooks
+
+Two hooks are installed via `git config core.hooksPath scripts/hooks`:
+
+| Hook | Purpose | Bypass |
+|------|---------|--------|
+| `pre-commit` | Lint, file size (R4), TypeScript errors (R16) | `git commit --no-verify` |
+| `post-commit` | Auto-register commits in `.pending-commits.log` | N/A |
 
 ## Enforced Rules (17 total)
 
@@ -248,6 +271,21 @@ When making significant architectural decisions, document them in the session fi
 
 ADRs are preserved in session archives and consolidated feature docs.
 
+## Troubleshooting
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| Orphan session (IN_PROGRESS, no activity) | Forgot `/finish` | Close manually or `/finish` from the branch |
+| BACKLOG inconsistent with sessions | Manual edits bypassed workflow | Run context-provider deep mode to reconcile |
+| Branch deleted but session exists | Force-deleted branch | Archive session manually, update README |
+| Hook not running (no .pending-commits.log entries) | `core.hooksPath` not set | Run `/setup` or `git config core.hooksPath scripts/hooks` |
+| Session file corrupted | Partial write during error | Delete and create new session with `/start` |
+| FIXES.md out of sync | Fixes done without FIXES update | Manually update FIXES.md entries |
+| Plan files accumulating | Plans not archived after completion | Move completed plans to `.claude/plan/completados/` |
+| Archive too large | Rotation not triggered | Manually run rotation: move old sessions to SUMMARY |
+| Stale sessions not detected | `staleSessionThreshold` not set | Add to config: `workflow.staleSessionThreshold: 24` |
+| Quality skill not found | Configured but not installed | Install via symlink or copy to `.claude/skills/` |
+
 ## Tips
 
 - Always use `/start` before beginning work to maintain tracking
@@ -265,5 +303,6 @@ ADRs are preserved in session archives and consolidated feature docs.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.1 | 2026-03-12 | /metrics skill, pre-commit hook, quality skills contract, stale session detection, FIXES integration, error recovery sections, troubleshooting, skill rewrites (fix-issue, deploy, explore-code) |
 | v2.0 | 2026-03-12 | 17 rules, /audit, MEMORY, plans, FIXES, Context7, improved agents |
 | v1.0 | 2026-02-06 | Initial release with 9 agents and 5 core skills |

@@ -122,7 +122,9 @@ Fallback method:
 cp scripts/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/post-commit
 ```
 
-This installs the post-commit hook that auto-registers commits in `context/.pending-commits.log`.
+This installs all hooks in the `scripts/hooks/` directory:
+- **post-commit**: auto-registers commits in `context/.pending-commits.log`
+- **pre-commit**: quality validation (lint, file size R4, TypeScript errors R16)
 
 ### 6. Create MEMORY.md (if not exists)
 
@@ -147,9 +149,12 @@ If they don't exist, create configured folders:
 - `{structure.docs}`
 - `context/tmp/`
 - `context/auditorias/`
+- `context/consolidated/`
 - `context/archive/{year}-Q{quarter}/sessions/`
 - `.claude/plan/`
 - `.claude/plan/completados/`
+
+Validate and report: "Context structure verified" or "Created missing directories: {list}"
 
 ### 9. Suggest MCP Servers
 

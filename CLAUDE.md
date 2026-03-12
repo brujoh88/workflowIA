@@ -32,11 +32,12 @@ Read these documents based on task type:
 | New feature | `context/BACKLOG.md`, `context/ROADMAP.md` | Active session, `MANUAL.md` |
 | Bug fix | Active session, `context/FIXES.md`, git log | `context/BACKLOG.md` |
 | Code review | `context/tmp/session-*.md` | `MANUAL.md` (review checklist) |
-| Architecture question | `docs/architecture.md`, `context/ROADMAP.md` | `context/consolidated/` |
+| Architecture question | `context/ROADMAP.md` | `context/consolidated/` |
 | Context/status query | `context/README.md`, `context/BACKLOG.md` | `context/ROADMAP.md` |
 | First interaction | `.claude/project.config.json` | `context/README.md`, `MANUAL.md` |
 | Fix (quick) | `context/FIXES.md` | Related source files |
 | Audit | `.claude/skills/audit/SKILL.md` | `context/auditorias/` |
+| Metrics/dashboard | `/metrics` skill | `context/ROADMAP.md`, `context/BACKLOG.md` |
 | Memory/lessons | `.claude/MEMORY.md` | Active session |
 | Plan review | `.claude/plan/*.md` | `context/ROADMAP.md` |
 
@@ -136,8 +137,8 @@ Before modifying code to fix a bug:
 
 | Agent | Specialty | When to Use |
 |-------|-----------|-------------|
-| **session-tracker** | Session lifecycle, commit tracking, rotation | `/start`, `/finish` |
-| **context-provider** | Project snapshot (quick/deep), status queries | `/start` (auto), "what's the status?" |
+| **session-tracker** | Session lifecycle, commit tracking, rotation, FIXES sync | `/start`, `/finish` |
+| **context-provider** | Project snapshot (quick/deep), stale session detection | `/start` (auto), "what's the status?" |
 | **feature-architect** | Feature structure, anatomy docs, size limits | `/start` (new features) |
 | **code-reviewer** | Standalone structured audit with verdicts | Direct delegation |
 | **code-explorer** | Interactive codebase navigation and understanding | `/explore-code`, direct |
@@ -170,14 +171,14 @@ See `context/README.md` for:
 - @context/BACKLOG.md
 - @context/ROADMAP.md
 - @context/FIXES.md
-- @docs/architecture.md
-- @src/api/README.md
 - @.claude/MANUAL.md
 - @.claude/MEMORY.md
+- @.claude/docs/QUALITY-SKILLS-CONTRACT.md
 
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.1 | 2026-03-12 | 9 improvements: /metrics, pre-commit hook, quality skills contract, stale detection, FIXES integration, error recovery, troubleshooting, skill rewrites |
 | v2.0 | 2026-03-12 | Backport from 124+ sessions: 17 rules, /audit skill, MEMORY, plans, FIXES, improved agents |
 | v1.0 | 2026-02-06 | Initial template from 45+ sessions |

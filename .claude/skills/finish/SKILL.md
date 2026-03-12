@@ -46,7 +46,10 @@ git diff --stat {mainBranch}..HEAD
 
 - If changes include frontend files AND `quality.externalSkills` has frontend-related skills:
   - Check if those skills were consulted during the session (look in session file Progress section)
-  - If NOT consulted: **WARN** user: "Quality skills {list} were not consulted for frontend changes. Run them now before finishing? (recommended)"
+  - For each configured skill:
+    1. Check if `.claude/skills/{skill-name}/SKILL.md` exists (via symlink or direct)
+    2. If exists and not consulted: **WARN** user: "Quality skill `{name}` is installed but was not consulted. Run now? (recommended)"
+    3. If not exists: note as "configured but not installed — skip"
   - If user declines, note in session as "Quality skills skipped"
 
 ### 1. Identify Active Session
@@ -138,6 +141,22 @@ If inconsistencies found:
 - Report them to the user
 - Suggest fixes
 - Apply fixes after user confirmation
+
+### 6.75. Update FIXES Registry
+
+If current branch is a fix branch (starts with `fix/`):
+1. Read `context/FIXES.md`
+2. Find matching In Progress item
+3. Move to Resolved (Recent) with:
+   - Fixed date: {current date}
+   - Root cause: from session Decisions section
+   - Fix description: from commit message
+   - Session reference: `session-{ID}`
+4. If fix was for a Pending item never moved to In Progress, move directly to Resolved
+
+If current branch is NOT a fix branch but fixes were done:
+- Check session file for any FIXES references
+- Update FIXES.md accordingly
 
 ### 6.7. Update ROADMAP (if exists)
 
@@ -312,6 +331,7 @@ git commit -m "docs(context): close session {ID}
 - [ ] BACKLOG cleanup done (under {backlogMaxLines} lines)
 - [ ] Bidirectional consistency verified
 - [ ] COMPLETED updated
+- [ ] FIXES updated (if fix branch)
 - [ ] ROADMAP updated (if exists)
 - [ ] Dependencies propagated
 - [ ] Feature completeness evaluated
@@ -331,6 +351,20 @@ Confirm:
 5. Commit: `{short hash}` - `{message}`
 6. Session archived: `context/archive/{year}-{quarter}/sessions/`
 7. BACKLOG: {N} items marked complete, {M} partial | Cleanup: {before}→{after} lines
-8. Feature completeness: {X}%
-9. Next suggested: {top suggestion}
-10. Suggested next step: merge to `{mainBranch}` or continue development
+8. FIXES: {N} items resolved (if fix branch)
+9. Feature completeness: {X}%
+10. Next suggested: {top suggestion}
+11. Suggested next step: merge to `{mainBranch}` or continue development
+
+## Error Recovery
+
+| Problem | Recovery |
+|---------|----------|
+| Tests fail | Fix tests before finishing. Do NOT skip with --no-verify |
+| Commit created but archive failed | Manually move session: `mv context/tmp/session-*.md context/archive/{Q}/sessions/` |
+| Session not found | Create retroactive session, then continue /finish |
+| BACKLOG update failed | Re-read BACKLOG, manually mark items, retry |
+| Branch deleted before merge | Session is archived — recover from archive for context |
+| Merge conflicts | Resolve conflicts, commit, then re-run /finish |
+| Partial /finish (died mid-process) | Check which steps completed (commits? archive? BACKLOG?), resume from incomplete step |
+| FIXES.md update failed | Manually update FIXES.md entries after /finish completes |

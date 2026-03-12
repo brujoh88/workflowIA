@@ -218,3 +218,13 @@ If yes:
 - **Skip gracefully** — If a module doesn't apply (e.g., no TypeScript), mark as SKIP
 - **Configurable thresholds** — Use values from project.config.json
 - **No false positives** — Verify each finding is genuine before reporting
+
+## Error Recovery
+
+| Problem | Recovery |
+|---------|----------|
+| TypeScript not installed | Skip Module A, mark as SKIP |
+| No test framework detected | Skip Module E, mark as SKIP |
+| No API endpoints found | Skip Modules B, C, F, mark as SKIP |
+| `context/auditorias/` missing | Create directory before writing report |
+| Audit report exceeds 400 lines | Split into separate module reports |

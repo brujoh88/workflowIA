@@ -36,6 +36,11 @@ All paths below are relative to PROJECT_ROOT.
    - Report orphan items
    - Mark BACKLOG items with session references
 
+5. **FIXES Synchronization**
+   - For fix sessions: verify FIXES.md entry exists and is consistent
+   - On session close: ensure FIXES item moved to Resolved with root cause and fix description
+   - Report orphan FIXES items (In Progress without active session)
+
 ## Pending Commits Log Management
 
 ### Format

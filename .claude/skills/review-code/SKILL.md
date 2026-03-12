@@ -39,12 +39,19 @@ Group changes by category:
 ## Step 1.5: Proactive Quality Skill Invocation
 
 If `externalSkills` are configured AND changes include relevant file types:
-- For each configured skill that matches the change type (e.g., frontend skill for component changes):
-  - Note: "Quality skill `{name}` should be invoked for these changes"
-  - If the skill was already run during the session (check session Progress), note it as completed
-  - If not run: recommend running it before or after this review
 
-Include the list of invoked/pending quality skills in the final report.
+For each skill in `externalSkills`:
+1. Check if `.claude/skills/{skill-name}/SKILL.md` exists (via symlink or direct)
+2. If exists: note as "available, should invoke"
+3. If not exists: note as "configured but not installed"
+
+For each available skill that matches the change type (e.g., frontend skill for component changes):
+- If the skill was already run during the session (check session Progress), note it as completed
+- If not run: recommend running it before or after this review
+
+Include the list of invoked/pending/missing quality skills in the final report.
+
+See `.claude/docs/QUALITY-SKILLS-CONTRACT.md` for the expected output format of quality skills.
 
 ## Step 2: Multi-Category Audit
 
@@ -174,3 +181,12 @@ For each changed file, apply the relevant checklists:
 | **READY** | 0 CRITICAL issues AND 0-2 IMPORTANT issues |
 | **CONDITIONAL** | 0 CRITICAL issues AND >2 IMPORTANT issues |
 | **PENDING** | Any CRITICAL issue present |
+
+## Error Recovery
+
+| Problem | Recovery |
+|---------|----------|
+| No recent commits to diff | Use `git diff --stat HEAD` or ask user for scope |
+| Quality skill not installed | Note as "configured but not installed" and continue review |
+| Session not found | Review without session context — note this in report |
+| Too many files to review | Group by category, focus on CRITICAL checks first |

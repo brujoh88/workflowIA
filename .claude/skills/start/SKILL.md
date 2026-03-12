@@ -15,13 +15,33 @@ Read `.claude/project.config.json` to get project configuration.
 
 **Variables to use**:
 - `{branchPrefix}` = `config.git.branchPrefixes.feature` (default: `feature/`)
+- `{fixPrefix}` = `config.git.branchPrefixes.fix` (default: `fix/`)
 - `{mainBranch}` = `config.git.mainBranch` (default: `main`)
 - `{devBranch}` = `config.git.devBranch` (default: `""` → use mainBranch)
 - `{baseBranch}` = devBranch if set, otherwise mainBranch
 - `{syncTypes}` = `config.commands.syncTypes` (default: `""`)
 - `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
+- `{staleThreshold}` = `config.workflow.staleSessionThreshold` (default: `24` hours)
 
 **Validation**: If `config.initialized === false`, suggest running `/setup` first.
+
+### 0.1. Context Structure Validation
+
+Verify required directories exist; create any that are missing:
+
+```
+Required:
+  - context/
+  - context/tmp/
+  - context/archive/
+  - context/auditorias/
+  - context/consolidated/
+  - .claude/plan/
+  - .claude/plan/completados/
+```
+
+For each: check existence, create if missing with `mkdir -p`.
+Report: "Context structure verified" or "Created missing directories: {list}"
 
 ### 0.5. Module Framing (Auto-detect)
 
@@ -51,6 +71,23 @@ Invoke **context-provider** agent in **quick mode**:
 
 Present a brief snapshot to the user before proceeding.
 
+### 1.7. Stale Session Check
+
+If context-provider reports active sessions, check for stale ones:
+
+For each active session in `context/tmp/session-*.md`:
+1. Read session start timestamp
+2. Calculate age in hours
+3. If age > `{staleThreshold}` (default: 24h): flag as "STALE"
+
+For each stale session, ask user:
+> "Session {ID} has been active for {N}h without activity. Options:
+> (a) Close it (mark COMPLETED with note 'closed as stale')
+> (b) Keep it (it's still active work)
+> (c) Pause it (mark PAUSED)"
+
+Apply user's choice before proceeding.
+
 ## Start Process
 
 ### 2. Check BACKLOG and Frame Feature
@@ -64,6 +101,16 @@ Read `context/BACKLOG.md` to verify if "$ARGUMENTS" is in the pending list.
   - Ask user: "This feature is not in the BACKLOG. Should I add it?"
   - If yes: add to "In Progress" with standard format
   - If no: proceed without BACKLOG entry (document in session)
+
+### 2.1. Fix Branch Detection
+
+If `$ARGUMENTS` starts with "fix-" or branch prefix is `{fixPrefix}`:
+1. Read `context/FIXES.md`
+2. Search Pending/In Progress for matching issue
+3. **If found**: pre-load context (reproduction steps, severity, related files)
+   - Move item from Pending → In Progress in FIXES.md
+   - Add FIXES reference to session file
+4. **If not found**: ask user "This fix is not in FIXES.md. Should I register it? (recommended)"
 
 ### 2.5. Consult ROADMAP (if exists)
 
@@ -223,6 +270,18 @@ Skip silently if Context7 is not available or stack is not configured.
 - [ ] Context README updated
 - [ ] Quality skills identified
 - [ ] Types synced (if configured)
+
+## Error Recovery
+
+| Problem | Recovery |
+|---------|----------|
+| Branch already exists | `git checkout {branch}` to resume, or `git branch -D {branch}` to restart |
+| Session file already exists | Check if session is stale (>{staleThreshold}h), resume or close and recreate |
+| Uncommitted changes block checkout | Stash: `git stash`, proceed, then `git stash pop` |
+| BACKLOG inconsistent | Run context-provider to reconcile, or manually fix entries |
+| Config not initialized | Run `/setup` first |
+| FIXES.md not found | Create from template (copy structure from plan) |
+| Context directories missing | Step 0.1 handles this automatically |
 
 ## Expected Output
 
