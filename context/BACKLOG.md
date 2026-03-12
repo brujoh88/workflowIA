@@ -2,6 +2,9 @@
 
 Single source of pending items for the project.
 
+**Last updated**: -
+**Target**: <300 lines (cleanup on `/finish`)
+
 ## In Progress
 
 _None currently_
@@ -24,6 +27,10 @@ Rotated to archive/COMPLETED.md when section grows large.
 ## Ideas / Future
 
 <!-- Items without defined priority -->
+
+## Suggested Next Session
+
+_Evaluated on `/finish` based on BACKLOG priorities and ROADMAP dependencies._
 
 ---
 

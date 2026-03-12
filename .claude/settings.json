@@ -1,0 +1,4 @@
+{
+  "enabledPlugins": { "typescript-lsp@claude-plugins-official": true },
+  "plansDirectory": ".claude/plan"
+}

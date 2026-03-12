@@ -1,6 +1,6 @@
 ---
 name: review-code
-description: Revisar código para calidad y bugs
+description: Review code for quality and bugs
 context: fork
 agent: Explore
 allowed-tools: Read, Grep, Glob
@@ -10,7 +10,12 @@ allowed-tools: Read, Grep, Glob
 
 ## Step 0: Load Context
 
-Read `.claude/project.config.json` for project conventions and limits.
+Read `.claude/project.config.json` for project conventions, limits, and quality settings.
+
+**Variables to load**:
+- `{maxFileLines}` = `config.workflow.maxFileLines` (default: 400)
+- `{maxFunctionLines}` = `config.workflow.maxFunctionLines` (default: 50)
+- `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
 
 Check for active session in `context/tmp/session-*.md`:
 - If exists: read session objective for context on what the changes are about
@@ -30,6 +35,16 @@ Group changes by category:
 | Database (models/migrations) | `src/database/`, `migrations/` | {N} |
 | Configuration | `*.config.*`, `.env*`, `package.json` | {N} |
 | Documentation | `docs/`, `*.md`, `context/` | {N} |
+
+## Step 1.5: Proactive Quality Skill Invocation
+
+If `externalSkills` are configured AND changes include relevant file types:
+- For each configured skill that matches the change type (e.g., frontend skill for component changes):
+  - Note: "Quality skill `{name}` should be invoked for these changes"
+  - If the skill was already run during the session (check session Progress), note it as completed
+  - If not run: recommend running it before or after this review
+
+Include the list of invoked/pending quality skills in the final report.
 
 ## Step 2: Multi-Category Audit
 
@@ -78,9 +93,24 @@ For each changed file, apply the relevant checklists:
 - [ ] Code follows project naming conventions
 - [ ] No unnecessary code duplication
 - [ ] Functions are single-responsibility
-- [ ] File length within limits (~400 lines)
-- [ ] Function length within limits (~50 lines)
+- [ ] File length within limits (~{maxFileLines} lines)
+- [ ] Function length within limits (~{maxFunctionLines} lines)
 - [ ] Imports are clean (no unused imports)
+
+### 2.7 Frontend Audit (Conditional: if frontend files changed)
+- [ ] Data fetching patterns are consistent (hooks, server components, etc.)
+- [ ] Accessibility: semantic HTML, ARIA labels, keyboard navigation
+- [ ] Dark mode: uses CSS variables or framework dark classes (not hardcoded colors)
+- [ ] Separation of concerns: logic in hooks/services, not in components
+- [ ] Loading/error states handled for async operations
+- [ ] Responsive design considered
+
+### 2.8 E2E Test Audit (Conditional: if E2E test files exist)
+- [ ] Page Object Model pattern used (or equivalent abstraction)
+- [ ] Selectors are stable (data-testid, roles, not CSS classes)
+- [ ] Tests are independent (no order dependency)
+- [ ] Proper waits used (not arbitrary sleeps)
+- [ ] Test data cleanup handled
 
 ## Step 3: Produce Report
 
@@ -93,6 +123,11 @@ For each changed file, apply the relevant checklists:
 **Branch**: {current branch}
 **Session**: {session ID if active}
 
+### Quality Skills Status
+| Skill | Status | Notes |
+|-------|--------|-------|
+| {skill name} | Invoked / Pending / N/A | {details} |
+
 ### Summary
 | Category | Critical | Important | Suggestion |
 |----------|----------|-----------|------------|
@@ -102,6 +137,8 @@ For each changed file, apply the relevant checklists:
 | Tests | {N} | {N} | {N} |
 | Documentation | {N} | {N} | {N} |
 | Maintainability | {N} | {N} | {N} |
+| Frontend | {N} | {N} | {N} |
+| E2E Tests | {N} | {N} | {N} |
 | **Total** | **{N}** | **{N}** | **{N}** |
 
 ### Issues
@@ -126,6 +163,8 @@ For each changed file, apply the relevant checklists:
 - **READY**: No critical issues found. Safe to merge.
 - **PENDING**: {N} critical issues must be resolved before merge.
 - **CONDITIONAL**: No critical issues, but {N} important issues should be tracked. Can merge with follow-up plan.
+
+**Quality skills invoked**: {list of skills consulted during this review cycle}
 ```
 
 ## Verdict Criteria

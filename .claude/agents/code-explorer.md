@@ -59,3 +59,7 @@ Especialista en exploración y comprensión de codebases.
 - [Observaciones importantes]
 - [Posible deuda técnica]
 ```
+
+## Note
+
+Most of this agent's functions are also covered by `/audit` (system-wide analysis) and `/review-code` (change-focused review). Use this agent when you need **interactive exploration** of specific code flows or architecture understanding that those skills don't cover.

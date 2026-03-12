@@ -44,20 +44,26 @@ Tracking system to document development sessions.
 ```
 context/
 ├── README.md                    # This file (index)
-├── BACKLOG.md                   # Single source of pending items
+├── BACKLOG.md                   # Single source of pending items (<300 lines target)
 ├── ROADMAP.md                   # Module progress and dependencies
+├── FIXES.md                     # Centralized bug/fix registry
 ├── .pending-commits.log         # Log of commits (auto via hook)
 ├── tmp/                         # Active session files
+│   ├── session-*.md             # Active sessions
+│   └── resumen-actual.md        # Latest context snapshot
 ├── archive/
 │   ├── COMPLETED.md             # History of completed items
 │   └── YYYY-QN/
 │       ├── sessions/            # Archived session files
 │       └── SUMMARY.md           # One line per session
+├── auditorias/                  # Audit reports from /audit
 └── consolidated/                # Per finished feature documentation
 ```
 
 ## References
 
-- `BACKLOG.md` - Prioritized pending list
+- `BACKLOG.md` - Prioritized pending list (<300 lines target)
 - `ROADMAP.md` - Module status and progress tracking
+- `FIXES.md` - Centralized bug/fix registry
 - `archive/COMPLETED.md` - History of completed features
+- `auditorias/` - System audit reports from `/audit`

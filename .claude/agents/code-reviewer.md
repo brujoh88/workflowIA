@@ -121,3 +121,7 @@ Senior reviewer specializing in code quality, security, and best practices.
 4. **Audit by category**: Apply each category checklist
 5. **Cross-reference**: Check consistency between files
 6. **Produce report**: Structured report with verdict
+
+## Note
+
+Most of this agent's functions are also covered by `/review-code` (the skill version with quality skill integration and frontend/E2E audit modules). Use this agent when you need a **standalone review** without the full skill workflow, or when delegated by other agents.

@@ -13,7 +13,8 @@
     "test": "npm test",
     "lint": "npm run lint",
     "dev": "npm run dev",
-    "build": "npm run build"
+    "build": "npm run build",
+    "syncTypes": ""
   },
   "git": {
     "branchPrefixes": {
@@ -21,7 +22,9 @@
       "fix": "fix/",
       "hotfix": "hotfix/"
     },
-    "mainBranch": "main"
+    "mainBranch": "main",
+    "devBranch": "",
+    "coAuthoredBy": false
   },
   "conventions": {
     "files": "kebab-case",
@@ -41,7 +44,13 @@
     "archiveRotationThreshold": 15,
     "blockRotationThreshold": 3,
     "preImplementationChecklist": true,
-    "roadmapEnabled": true
+    "roadmapEnabled": true,
+    "backlogMaxLines": 300,
+    "recentSessionsToKeep": 3,
+    "coverageThreshold": 80
+  },
+  "quality": {
+    "externalSkills": []
   },
   "mcp": {
     "installed": [],

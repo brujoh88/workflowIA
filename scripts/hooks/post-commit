@@ -1,6 +1,9 @@
 #!/bin/sh
 # post-commit hook: Auto-register commits in context/.pending-commits.log
 # Format: STATUS|DATE|HASH|BRANCH|MESSAGE
+#
+# Setup: git config core.hooksPath scripts/hooks
+# Or:    cp scripts/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/post-commit
 
 LOG_FILE="context/.pending-commits.log"
 
@@ -11,8 +14,9 @@ MESSAGE=$(git log -1 --format="%s")
 DATE=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Determine status: documentation commits are auto-marked DOCUMENTED
+# Anti-loop patterns: docs(context):, chore(session):, docs(session):, docs(session-XXX):
 case "$MESSAGE" in
-  docs\(context\):*|chore\(session\):*|docs\(session\):*|chore\(context\):*)
+  docs\(context\):*|chore\(session\):*|docs\(session\):*|docs\(session-*\):*|chore\(context\):*)
     STATUS="DOCUMENTED"
     ;;
   *)

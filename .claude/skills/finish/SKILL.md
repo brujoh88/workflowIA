@@ -26,12 +26,28 @@ Read `.claude/project.config.json` to get project configuration.
 - `{testCmd}` = `config.commands.test` (default: `npm test`)
 - `{lintCmd}` = `config.commands.lint` (default: `npm run lint`)
 - `{mainBranch}` = `config.git.mainBranch` (default: `main`)
+- `{coAuthoredBy}` = `config.git.coAuthoredBy` (default: `false`)
 - `{quarter}` = current quarter (Q1-Q4)
 - `{year}` = current year
 - `{archiveRotationThreshold}` = `config.workflow.archiveRotationThreshold` (default: 15)
 - `{blockRotationThreshold}` = `config.workflow.blockRotationThreshold` (default: 3)
+- `{backlogMaxLines}` = `config.workflow.backlogMaxLines` (default: 300)
+- `{recentSessionsToKeep}` = `config.workflow.recentSessionsToKeep` (default: 3)
+- `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
 
 **Validation**: If `config.initialized === false`, warn but continue with defaults.
+
+### 0.5. Pre-verification: Quality Skills Check
+
+Detect the type of changes made:
+```bash
+git diff --stat {mainBranch}..HEAD
+```
+
+- If changes include frontend files AND `quality.externalSkills` has frontend-related skills:
+  - Check if those skills were consulted during the session (look in session file Progress section)
+  - If NOT consulted: **WARN** user: "Quality skills {list} were not consulted for frontend changes. Run them now before finishing? (recommended)"
+  - If user declines, note in session as "Quality skills skipped"
 
 ### 1. Identify Active Session
 !`git branch --show-current`
@@ -63,25 +79,22 @@ Find active session in `context/tmp/session-*.md` matching the current branch.
 
 In the active session file, update:
 - Status: `COMPLETED`
-- Add "Final Summary" section:
+- Add "Final Summary" section with **compact format** (8-12 lines max):
 
 ```markdown
 ## Final Summary
 - **End**: {date and time}
 - **Duration**: {calculated from start}
+- **Objective**: {one-line objective from session}
+- **Result**: {one-line what was achieved}
 - **Commits**: {count}
-- **Modified files**: {list}
-
-### Main Changes
-- [List significant changes]
-
-### Tests
-- Status: PASSED/FAILED
-- Coverage: {if available}
-
-### BACKLOG Items Completed
-- [x] **[scope]** description *(session-{ID})*
+- **Files modified**: {count}
+- **Tests**: PASSED | FAILED (coverage: {%} if available)
+- **BACKLOG items**: {N} completed, {M} partial
+- **Link**: branch `{branch}`, session `{ID}`
 ```
+
+**IMPORTANT**: Keep the COMPLETED block compact. Do NOT include exhaustive lists of changes — the git log has that detail.
 
 ### 6. Update BACKLOG
 
@@ -104,6 +117,16 @@ Format for partial items:
   - Remaining: {what's left}
 ```
 
+### 6.3. BACKLOG Cleanup
+
+After updating items:
+1. Remove `[x]` items from body sections (they're already in "Completed (Recent)")
+2. Count total lines in BACKLOG
+3. If > `{backlogMaxLines}` lines:
+   - Move oldest "Completed (Recent)" items to `archive/COMPLETED.md`
+   - Target: keep BACKLOG under `{backlogMaxLines}` lines
+4. Report: "BACKLOG: {before} → {after} lines"
+
 ### 6.5. CRITICAL: Bidirectional Consistency Check
 
 Verify consistency between Session and BACKLOG:
@@ -125,6 +148,29 @@ Read `context/ROADMAP.md` and update if it exists:
 - Update global metrics
 
 If ROADMAP doesn't exist, skip silently.
+
+### 6.8. Propagate Dependencies
+
+Search ROADMAP for modules that had dependencies on the completed module/feature:
+- For each dependency that is now satisfied: update `❌` → `✅` (or equivalent marker)
+- If a blocked module is now unblocked, note it in the output
+- This ensures the dependency map stays accurate
+
+### 6.9. Suggest Next Session
+
+Evaluate BACKLOG + ROADMAP to suggest what to work on next:
+- Look at "Next (Prioritized)" items in BACKLOG
+- Check ROADMAP for unblocked modules with highest priority
+- Consider dependency chains (what unblocks the most)
+- Present 2-3 options ranked by priority
+
+Format:
+```markdown
+### Suggested Next Session
+1. **{item}** - {reason} (from BACKLOG/ROADMAP)
+2. **{item}** - {reason}
+3. **{item}** - {reason}
+```
 
 ### 7. Register in COMPLETED
 
@@ -171,6 +217,10 @@ git commit -m "type(scope): description
 "
 ```
 
+**IMPORTANT on Co-Authored-By**: Check `config.git.coAuthoredBy`:
+- If `true`: Add `Co-Authored-By: Claude <noreply@anthropic.com>` to commit message
+- If `false` (default): Do NOT include any AI attribution in the commit message
+
 ### 9. Archive Session
 
 Move session from `context/tmp/` to `context/archive/{year}-{quarter}/sessions/`:
@@ -185,7 +235,7 @@ Then move:
 mv context/tmp/session-{ID}.md context/archive/{year}-{quarter}/sessions/
 ```
 
-### 9.5. Archive Rotation Check
+### 9.5. Smart Archive Rotation
 
 Check if rotation is needed:
 
@@ -193,7 +243,8 @@ Check if rotation is needed:
 - If > `{blockRotationThreshold}` (default: 3): Summarize oldest blocks to `context/archive/{year}-{quarter}/SUMMARY.md`
 
 **Condition 2**: Count sessions in `context/archive/{year}-{quarter}/sessions/`
-- If > `{archiveRotationThreshold}` (default: 15): Generate quarterly summary, move oldest session details to SUMMARY.md keeping only headers
+- Keep the `{recentSessionsToKeep}` most recent sessions (by highest session number)
+- Archive older sessions: compress their content into SUMMARY.md keeping only headers
 
 **Rotation action**:
 ```markdown
@@ -212,11 +263,29 @@ Add closure metadata:
 <!-- Last session: {ID} completed {date} on branch {branch} -->
 ```
 
+### 10.5. Archive Plan (if exists)
+
+Check if a plan file exists in `.claude/plan/` for this feature:
+```
+Glob: .claude/plan/*$ARGUMENTS* , .claude/plan/*.md
+```
+
+If found:
+- Ask user: "Found plan file {name}. Archive to `completados/`?"
+- If yes: move to `.claude/plan/completados/`
+- If no: leave in place
+
 ### 11. Update Pending Commits Log
 
 Read `context/.pending-commits.log` and update entries for this branch:
 - Change `PENDING` → `PROCESSED` for all commits on this branch
 - This marks them as included in the session summary
+
+### 11.5. Document Commits
+
+Invoke **session-tracker** agent to create the documentation commit:
+- This ensures proper anti-loop patterns are used
+- The agent handles the `docs(context):` commit prefix
 
 ### 12. Documentation Commit
 
@@ -236,25 +305,32 @@ git commit -m "docs(context): close session {ID}
 ## Final Verification
 
 - [ ] Tests passed
-- [ ] Commit created with descriptive message
-- [ ] Session archived with complete metadata
+- [ ] Quality skills check completed
+- [ ] Commit created with descriptive message (Co-Authored-By per config)
+- [ ] Session archived with compact summary
 - [ ] BACKLOG updated (items marked [x] or [~])
+- [ ] BACKLOG cleanup done (under {backlogMaxLines} lines)
 - [ ] Bidirectional consistency verified
 - [ ] COMPLETED updated
 - [ ] ROADMAP updated (if exists)
+- [ ] Dependencies propagated
 - [ ] Feature completeness evaluated
 - [ ] Context README updated
-- [ ] Archive rotation checked
+- [ ] Archive rotation checked (keeping {recentSessionsToKeep} recent)
+- [ ] Plan archived (if exists)
 - [ ] Pending commits log updated
+- [ ] Next session suggested
 
 ## Expected Output
 
 Confirm:
 1. Configuration: loaded from `.claude/project.config.json`
-2. Tests (`{testCmd}`): PASSED
-3. Lint (`{lintCmd}`): OK
-4. Commit: `{short hash}` - `{message}`
-5. Session archived: `context/archive/{year}-{quarter}/sessions/`
-6. BACKLOG: {N} items marked complete, {M} partial
-7. Feature completeness: {X}%
-8. Suggested next step: merge to `{mainBranch}` or continue development
+2. Quality skills: {consulted or skipped}
+3. Tests (`{testCmd}`): PASSED
+4. Lint (`{lintCmd}`): OK
+5. Commit: `{short hash}` - `{message}`
+6. Session archived: `context/archive/{year}-{quarter}/sessions/`
+7. BACKLOG: {N} items marked complete, {M} partial | Cleanup: {before}→{after} lines
+8. Feature completeness: {X}%
+9. Next suggested: {top suggestion}
+10. Suggested next step: merge to `{mainBranch}` or continue development
