@@ -30,6 +30,7 @@ Thumbs.db
 logs/
 *.log
 !context/.pending-commits.log
+context/.context.lock
 
 # Test coverage
 coverage/

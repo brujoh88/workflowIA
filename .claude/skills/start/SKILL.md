@@ -22,6 +22,7 @@ Read `.claude/project.config.json` to get project configuration.
 - `{syncTypes}` = `config.commands.syncTypes` (default: `""`)
 - `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
 - `{staleThreshold}` = `config.workflow.staleSessionThreshold` (default: `24` hours)
+- `{parallelEnabled}` = `config.parallel.enabled` (default: `true`)
 
 **Validation**: If `config.initialized === false`, suggest running `/setup` first.
 
@@ -169,6 +170,17 @@ If this is a new feature (not a fix or refactor), invoke **feature-architect**:
 
 If user approves, create the proposed structure.
 
+### 3.9. Acquire Context Lock (Parallel Sessions)
+
+If `{parallelEnabled}` is true:
+```bash
+./scripts/context-lock.sh acquire "{session-id}" "/start"
+```
+- If lock is held by another `/start` or `/finish`: retry up to 3 times every 5 seconds
+- If fails: inform user "Cannot acquire context lock. Another operation is in progress."
+- Lock protects: session file creation, README update, BACKLOG update
+- Code work is 100% parallelizable (no lock needed)
+
 ### 4. Create Session
 
 Generate session ID: `YYYYMMDD-HHMM-$ARGUMENTS`
@@ -223,6 +235,14 @@ Add entry to "Active Sessions" table in `context/README.md`:
 ```markdown
 | {ID} | {branchPrefix}$ARGUMENTS | IN_PROGRESS | {date} | {description} |
 ```
+
+### 5.1. Release Context Lock
+
+If lock was acquired in step 3.9:
+```bash
+./scripts/context-lock.sh release
+```
+**CRITICAL**: Lock MUST be released after context writes are done, even if errors occur.
 
 ### 5.5. Pre-Implementation Checklist
 
@@ -282,6 +302,8 @@ Skip silently if Context7 is not available or stack is not configured.
 | Config not initialized | Run `/setup` first |
 | FIXES.md not found | Create from template (copy structure from plan) |
 | Context directories missing | Step 0.1 handles this automatically |
+| Context lock held by another operation | Wait for lock timeout ({lockTimeoutSeconds}s) or retry |
+| Lock script not found | Skip lock (parallel protection unavailable) |
 
 ## Expected Output
 

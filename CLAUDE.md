@@ -133,6 +133,32 @@ Before modifying code to fix a bug:
   - Update `.claude/MANUAL.md` to reflect the change
   - Keep the MANUAL as the single source of truth for framework usage
 
+### R18. Docker Environment
+- If the project uses Docker for databases/services:
+  - Run all DB commands (migrations, seeds, queries) inside the container
+  - Use non-interactive mode for migrations (no TTY): `docker exec` without `-it`
+  - Never run `prisma migrate dev` or equivalent directly on host if DB is in Docker
+
+### R19. CPU Limiting in Tests
+- Limit test runner workers to `workflow.testMaxWorkers` (default: 2)
+- Prevents CPU saturation on development machines
+- Jest: `--maxWorkers={testMaxWorkers}`
+- Vitest: `--maxForks={testMaxWorkers}` or `--poolOptions.forks.maxForks={testMaxWorkers}`
+
+### R20. Database Migrations Protocol
+- For projects using ORMs (Prisma, TypeORM, etc.) with Docker:
+  1. Generate migration diff (e.g., `prisma migrate diff`)
+  2. Review the generated SQL manually
+  3. Apply with deploy command (e.g., `prisma migrate deploy`)
+  4. Never use interactive migration commands in CI/hooks
+
+### R21. Parallel Sessions
+- Multiple Claude instances can work on different branches simultaneously
+- Context writes (README, BACKLOG, ROADMAP) are serialized via `scripts/context-lock.sh`
+- Code work is 100% parallelizable (no lock needed for coding)
+- Lock timeout: `parallel.lockTimeoutSeconds` (default: 60s)
+- Each session filters commits by its own branch to prevent cross-contamination
+
 ## Task Delegation
 
 | Agent | Specialty | When to Use |
@@ -179,6 +205,7 @@ See `context/README.md` for:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.2 | 2026-03-13 | 10 improvements from 127+ sessions: parallel sessions, per-type file limits, enhanced hooks, Docker/CPU/migrations rules, cross-section consistency, enhanced rotation |
 | v2.1 | 2026-03-12 | 9 improvements: /metrics, pre-commit hook, quality skills contract, stale detection, FIXES integration, error recovery, troubleshooting, skill rewrites |
 | v2.0 | 2026-03-12 | Backport from 124+ sessions: 17 rules, /audit skill, MEMORY, plans, FIXES, improved agents |
 | v1.0 | 2026-02-06 | Initial template from 45+ sessions |

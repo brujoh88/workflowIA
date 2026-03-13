@@ -39,7 +39,12 @@
     "docs": "docs/"
   },
   "workflow": {
-    "maxFileLines": 400,
+    "maxFileLines": {
+      "default": 400,
+      "services": 500,
+      "components": 300,
+      "hooks": 150
+    },
     "maxFunctionLines": 50,
     "archiveRotationThreshold": 15,
     "blockRotationThreshold": 3,
@@ -48,10 +53,16 @@
     "backlogMaxLines": 300,
     "recentSessionsToKeep": 3,
     "coverageThreshold": 80,
-    "staleSessionThreshold": 24
+    "staleSessionThreshold": 24,
+    "testMaxWorkers": 2
   },
   "quality": {
     "externalSkills": []
+  },
+  "parallel": {
+    "enabled": true,
+    "lockTimeoutSeconds": 60,
+    "lockFile": "context/.context.lock"
   },
   "mcp": {
     "installed": [],

@@ -34,8 +34,20 @@ Read `.claude/project.config.json` to get project configuration.
 - `{backlogMaxLines}` = `config.workflow.backlogMaxLines` (default: 300)
 - `{recentSessionsToKeep}` = `config.workflow.recentSessionsToKeep` (default: 3)
 - `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
+- `{parallelEnabled}` = `config.parallel.enabled` (default: `true`)
+- `{testMaxWorkers}` = `config.workflow.testMaxWorkers` (default: `2`)
 
 **Validation**: If `config.initialized === false`, warn but continue with defaults.
+
+### 0.3. Acquire Context Lock (Parallel Sessions)
+
+If `{parallelEnabled}` is true:
+```bash
+./scripts/context-lock.sh acquire "{session-id}" "/finish"
+```
+- If lock is held: retry up to 3 times every 5 seconds
+- If fails: inform user and wait
+- **CRITICAL**: Lock MUST be released in step 11.7, even if errors occur
 
 ### 0.5. Pre-verification: Quality Skills Check
 
@@ -62,8 +74,9 @@ Find active session in `context/tmp/session-*.md` matching the current branch.
 ## Finish Process
 
 ### 2. Run Tests
+
 ```bash
-{testCmd}
+{testCmd} --maxWorkers={testMaxWorkers}   # R19: limit CPU usage (default: 2)
 ```
 
 - If fail: STOP and report errors to user
@@ -168,12 +181,16 @@ Read `context/ROADMAP.md` and update if it exists:
 
 If ROADMAP doesn't exist, skip silently.
 
-### 6.8. Propagate Dependencies
+### 6.8. Cross-Section Consistency & Propagate Dependencies
 
-Search ROADMAP for modules that had dependencies on the completed module/feature:
-- For each dependency that is now satisfied: update `❌` → `✅` (or equivalent marker)
-- If a blocked module is now unblocked, note it in the output
-- This ensures the dependency map stays accurate
+**Cross-section consistency**: When a module completes, propagate across all tracking files:
+1. Search ROADMAP for modules that had dependencies on the completed module/feature
+2. For each dependency now satisfied: update `❌` → `✅` (or equivalent marker)
+3. Search BACKLOG for items that referenced the completed module as a blocker
+4. If a blocked module is now unblocked, note it in the output
+5. Update any "Depends on" fields in ROADMAP that reference the completed work
+
+This ensures the dependency map stays accurate across BACKLOG, ROADMAP, and session files.
 
 ### 6.9. Suggest Next Session
 
@@ -256,22 +273,13 @@ mv context/tmp/session-{ID}.md context/archive/{year}-{quarter}/sessions/
 
 ### 9.5. Smart Archive Rotation
 
-Check if rotation is needed:
+Check rotation triggers (act on first exceeded):
 
-**Condition 1**: Count completed blocks in `context/archive/COMPLETED.md`
-- If > `{blockRotationThreshold}` (default: 3): Summarize oldest blocks to `context/archive/{year}-{quarter}/SUMMARY.md`
-
-**Condition 2**: Count sessions in `context/archive/{year}-{quarter}/sessions/`
-- Keep the `{recentSessionsToKeep}` most recent sessions (by highest session number)
-- Archive older sessions: compress their content into SUMMARY.md keeping only headers
-
-**Rotation action**:
-```markdown
-## Quarterly Summary Entry
-| Session ID | Date | Branch | Summary |
-|-----------|------|--------|---------|
-| {ID} | {date} | {branch} | {one-line summary} |
-```
+| Trigger | Threshold | Action |
+|---------|-----------|--------|
+| Completed blocks in COMPLETED.md | > `{blockRotationThreshold}` (3) | Summarize oldest to quarterly SUMMARY.md |
+| Sessions in quarter archive | > `{archiveRotationThreshold}` (15) | Keep `{recentSessionsToKeep}` recent, compress rest |
+| BACKLOG lines | > `{backlogMaxLines}` (300) | Move oldest completed items to `archive/COMPLETED.md` |
 
 ### 10. Update Context README
 
@@ -300,9 +308,17 @@ Read `context/.pending-commits.log` and update entries for this branch:
 - Change `PENDING` → `PROCESSED` for all commits on this branch
 - This marks them as included in the session summary
 
-### 11.5. Document Commits
+### 11.5. Release Context Lock
 
-Invoke **session-tracker** agent to create the documentation commit:
+If lock was acquired in step 0.3:
+```bash
+./scripts/context-lock.sh release
+```
+**CRITICAL**: This MUST execute even if previous steps failed. The lock protects context writes only.
+
+### 11.6. Document Commits
+
+Invoke **session-tracker** agent to create the documentation commit (filter commits by current branch for parallel safety):
 - This ensures proper anti-loop patterns are used
 - The agent handles the `docs(context):` commit prefix
 
@@ -368,3 +384,5 @@ Confirm:
 | Merge conflicts | Resolve conflicts, commit, then re-run /finish |
 | Partial /finish (died mid-process) | Check which steps completed (commits? archive? BACKLOG?), resume from incomplete step |
 | FIXES.md update failed | Manually update FIXES.md entries after /finish completes |
+| Context lock not released | Run `./scripts/context-lock.sh release` manually |
+| Lock script not found | Skip lock (parallel protection unavailable) |

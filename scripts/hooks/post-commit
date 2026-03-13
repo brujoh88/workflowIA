@@ -3,7 +3,6 @@
 # Format: STATUS|DATE|HASH|BRANCH|MESSAGE
 #
 # Setup: git config core.hooksPath scripts/hooks
-# Or:    cp scripts/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/post-commit
 
 LOG_FILE="context/.pending-commits.log"
 
@@ -15,17 +14,23 @@ DATE=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Determine status: documentation commits are auto-marked DOCUMENTED
 # Anti-loop patterns: docs(context):, chore(session):, docs(session):, docs(session-XXX):
-case "$MESSAGE" in
-  docs\(context\):*|chore\(session\):*|docs\(session\):*|docs\(session-*\):*|chore\(context\):*)
+if echo "$MESSAGE" | grep -qE "^(docs|chore)\((context|session-[0-9]+|session-[0-9]{8}T[0-9]{4}|session-[0-9]{8}-[0-9]{4})\): "; then
     STATUS="DOCUMENTED"
-    ;;
-  *)
+    MSG_EXTRA="(auto-documented)"
+else
     STATUS="PENDING"
-    ;;
-esac
+    MSG_EXTRA=""
+fi
 
 # Ensure log file exists
 mkdir -p "$(dirname "$LOG_FILE")"
 
 # Append entry
 echo "${STATUS}|${DATE}|${HASH}|${BRANCH}|${MESSAGE}" >> "$LOG_FILE"
+
+# Visual feedback
+if [ "$STATUS" = "DOCUMENTED" ]; then
+    echo "post-commit: Commit registered [${BRANCH}] ${MSG_EXTRA}"
+else
+    echo "post-commit: Commit registered [${BRANCH}]"
+fi

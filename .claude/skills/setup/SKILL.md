@@ -78,13 +78,21 @@ Ask locations:
 - Tests: `tests/` or `__tests__/` or `src/__tests__/`
 - Docs: `docs/` (default)
 
-#### 2.8 Quality & Workflow (NEW)
+#### 2.8 Quality & Workflow
 
 Ask:
 - **Coverage threshold** (default: 80%): minimum test coverage target
+- **Test max workers** (default: 2): limit CPU usage during tests (R19)
+- **Per-type file limits** (defaults: services 500, components 300, hooks 150, default 400)
 - **External quality skills** (optional): list of external skill names to install via symlinks
   - Example: `["accessibility-checker", "performance-audit"]`
   - These will be checked by `/review-code` and `/finish`
+
+#### 2.9 Parallel Sessions
+
+Ask:
+- **Enable parallel sessions?** (default: yes): allow multiple Claude instances on different branches
+- **Lock timeout** (default: 60s): how long before a stuck lock auto-expires
 
 ### 3. Save Configuration
 
@@ -96,6 +104,11 @@ Update `.claude/project.config.json` with all collected values, including new fi
 - `workflow.backlogMaxLines` (default: 300)
 - `workflow.recentSessionsToKeep` (default: 3)
 - `quality.externalSkills`
+- `workflow.testMaxWorkers`
+- `workflow.maxFileLines` (object with per-type limits)
+- `parallel.enabled`
+- `parallel.lockTimeoutSeconds`
+- `parallel.lockFile`
 
 Set `"initialized": true`.
 
@@ -140,6 +153,29 @@ Check if `.claude/settings.json` exists. If not, create with:
   "plansDirectory": ".claude/plan"
 }
 ```
+
+### 7.5. Create settings.local.json template (if not exists)
+
+Check if `.claude/settings.local.json` exists. If not, create a starter template:
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm:*)",
+      "Bash(git:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Read",
+      "Write",
+      "Edit",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs"
+    ]
+  }
+}
+```
+
+Inform user: "Created `.claude/settings.local.json` with recommended permissions. Customize as needed. This file is gitignored."
 
 ### 8. Create Folder Structure
 

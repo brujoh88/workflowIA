@@ -1,6 +1,6 @@
 # WorkflowIA - User Manual
 
-Guide for using the workflowIA development framework (v2.1).
+Guide for using the workflowIA development framework (v2.2).
 
 ## Setup on New Machine
 
@@ -190,6 +190,39 @@ Files are automatically rotated to prevent bloat:
 | BACKLOG > 300 lines | Move oldest completed to archive |
 | Plan completed | Move to `completados/` |
 
+## Parallel Sessions
+
+Multiple Claude instances can work on different branches simultaneously.
+
+**Architecture**:
+- Code work is 100% parallelizable (each instance works on its own branch)
+- Context writes (README, BACKLOG, ROADMAP) are serialized via lock
+- Lock file: `context/.context.lock` (auto-created, auto-expired)
+- Lock script: `scripts/context-lock.sh`
+
+**Lock operations**:
+```bash
+./scripts/context-lock.sh acquire "session-id" "/start"   # Acquire lock
+./scripts/context-lock.sh release                          # Release lock
+./scripts/context-lock.sh check                            # Check status
+```
+
+**Configuration** in `project.config.json`:
+```json
+"parallel": {
+  "enabled": true,
+  "lockTimeoutSeconds": 60,
+  "lockFile": "context/.context.lock"
+}
+```
+
+**When is the lock held?**
+- `/start`: during session file creation, README update, BACKLOG update
+- `/finish`: during session archive, BACKLOG cleanup, ROADMAP update
+- Released immediately after context writes complete
+
+**Timeout safety**: If a crash leaves the lock, it auto-expires after `lockTimeoutSeconds`.
+
 ## Configuration
 
 All project settings live in `.claude/project.config.json`:
@@ -198,8 +231,9 @@ All project settings live in `.claude/project.config.json`:
 - Commands (test, lint, dev, build, syncTypes)
 - Git configuration (branch prefixes, main/dev branch, coAuthoredBy)
 - Code conventions (naming, commits)
-- Workflow thresholds (max file lines, rotation triggers, coverage, BACKLOG max lines, staleSessionThreshold)
+- Workflow thresholds (max file lines per type, rotation triggers, coverage, BACKLOG max lines, staleSessionThreshold, testMaxWorkers)
 - Quality settings (external skills — see Quality Skills Contract)
+- Parallel sessions (enabled, lock timeout, lock file path)
 - MCP settings (installed, suggested)
 
 Run `/setup` to configure interactively.
@@ -231,17 +265,17 @@ Two hooks are installed via `git config core.hooksPath scripts/hooks`:
 
 | Hook | Purpose | Bypass |
 |------|---------|--------|
-| `pre-commit` | Lint, file size (R4), TypeScript errors (R16) | `git commit --no-verify` |
+| `pre-commit` | Lint, per-type file size (R4), TypeScript errors (R16) | `git commit --no-verify` |
 | `post-commit` | Auto-register commits in `.pending-commits.log` | N/A |
 
-## Enforced Rules (17 total)
+## Enforced Rules (21 total)
 
 | # | Rule | Summary |
 |---|------|---------|
 | R1 | Language | Respond/code in configured language |
 | R2 | Git Flow | main protected, branch from dev if configured |
 | R3 | Commits | Co-Authored-By only if configured |
-| R4 | File Size | Enforce maxFileLines/maxFunctionLines |
+| R4 | File Size | Enforce per-type maxFileLines/maxFunctionLines |
 | R5 | Testing | Coverage BEFORE/AFTER, target threshold |
 | R6 | Verify First | Glob+Grep before creating, no assumptions |
 | R7 | BACKLOG Compaction | Stay under backlogMaxLines |
@@ -255,6 +289,10 @@ Two hooks are installed via `git config core.hooksPath scripts/hooks`:
 | R15 | Quality Skills | Frontend changes require quality skill check |
 | R16 | LSP Diagnostics | Type errors are blockers |
 | R17 | Sync MANUAL | Update MANUAL when modifying .claude/ |
+| R18 | Docker Environment | DB commands inside container, non-interactive migrations |
+| R19 | CPU Limiting | Test workers capped at `testMaxWorkers` (default: 2) |
+| R20 | Migrations Protocol | Generate diff → review SQL → deploy (non-interactive) |
+| R21 | Parallel Sessions | Context writes serialized via lock, code work parallelizable |
 
 ## Architecture Decision Records (ADR)
 
@@ -285,6 +323,8 @@ ADRs are preserved in session archives and consolidated feature docs.
 | Archive too large | Rotation not triggered | Manually run rotation: move old sessions to SUMMARY |
 | Stale sessions not detected | `staleSessionThreshold` not set | Add to config: `workflow.staleSessionThreshold: 24` |
 | Quality skill not found | Configured but not installed | Install via symlink or copy to `.claude/skills/` |
+| Context lock stuck | Crash during `/start` or `/finish` | Run `./scripts/context-lock.sh release` manually |
+| Parallel sessions conflict | Two operations writing context | Lock auto-expires after `lockTimeoutSeconds` (default: 60s) |
 
 ## Tips
 
@@ -303,6 +343,7 @@ ADRs are preserved in session archives and consolidated feature docs.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.2 | 2026-03-13 | 10 improvements from 127+ sessions: parallel sessions, per-type file limits, enhanced hooks, Docker/CPU/migrations rules, cross-section consistency, enhanced rotation |
 | v2.1 | 2026-03-12 | /metrics skill, pre-commit hook, quality skills contract, stale session detection, FIXES integration, error recovery sections, troubleshooting, skill rewrites (fix-issue, deploy, explore-code) |
 | v2.0 | 2026-03-12 | 17 rules, /audit, MEMORY, plans, FIXES, Context7, improved agents |
 | v1.0 | 2026-02-06 | Initial release with 9 agents and 5 core skills |

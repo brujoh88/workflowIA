@@ -1,20 +1,37 @@
 #!/bin/sh
 # pre-commit hook: Quality validation before commits
-# Checks: lint (if configured), TypeScript errors (if tsc available), file size (R4)
+# Checks: lint (if configured), per-type file size (R4), TypeScript errors (R16)
 # Bypass: git commit --no-verify (emergencies only)
 
 CONFIG_FILE=".claude/project.config.json"
 
-# Read config (fallback to defaults if jq not available)
+# Default limits
+LINT_CMD=""
+MAX_DEFAULT=400
+MAX_SERVICE=400
+MAX_COMPONENT=400
+MAX_HOOK=400
+
+# Read config (if jq available)
 if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
   LINT_CMD=$(jq -r '.commands.lint // ""' "$CONFIG_FILE")
-  MAX_LINES=$(jq -r '.workflow.maxFileLines // 400' "$CONFIG_FILE")
-else
-  LINT_CMD=""
-  MAX_LINES=400
+
+  # Per-type limits: check if maxFileLines is object or number
+  MAX_TYPE=$(jq -r '.workflow.maxFileLines | type' "$CONFIG_FILE" 2>/dev/null)
+  if [ "$MAX_TYPE" = "object" ]; then
+    MAX_SERVICE=$(jq -r '.workflow.maxFileLines.services // 500' "$CONFIG_FILE")
+    MAX_COMPONENT=$(jq -r '.workflow.maxFileLines.components // 300' "$CONFIG_FILE")
+    MAX_HOOK=$(jq -r '.workflow.maxFileLines.hooks // 150' "$CONFIG_FILE")
+    MAX_DEFAULT=$(jq -r '.workflow.maxFileLines.default // 400' "$CONFIG_FILE")
+  else
+    MAX_DEFAULT=$(jq -r '.workflow.maxFileLines // 400' "$CONFIG_FILE")
+    MAX_SERVICE=$MAX_DEFAULT
+    MAX_COMPONENT=$MAX_DEFAULT
+    MAX_HOOK=$MAX_DEFAULT
+  fi
 fi
 
-# Check 1: Lint (if configured and command exists)
+# Check 1: Lint (if configured)
 if [ -n "$LINT_CMD" ]; then
   echo "pre-commit: Running lint..."
   eval "$LINT_CMD" 2>/dev/null
@@ -24,19 +41,35 @@ if [ -n "$LINT_CMD" ]; then
   fi
 fi
 
-# Check 2: File size (R4)
-OVERSIZED=""
+# Check 2: File size per type (R4)
+ERRORS=0
 for file in $(git diff --cached --name-only --diff-filter=ACM); do
   if [ -f "$file" ]; then
     lines=$(wc -l < "$file")
-    if [ "$lines" -gt "$MAX_LINES" ]; then
-      OVERSIZED="$OVERSIZED\n  $file ($lines lines, max $MAX_LINES)"
+    MAX_LIMIT=$MAX_DEFAULT
+
+    # Determine file type and apply specific limit
+    case "$file" in
+      *.service.ts|*.service.js)
+        MAX_LIMIT=$MAX_SERVICE
+        ;;
+      *.tsx|*.component.ts|*.component.js)
+        MAX_LIMIT=$MAX_COMPONENT
+        ;;
+      */hooks/*|*/use[A-Z]*.ts|*/use[A-Z]*.tsx)
+        MAX_LIMIT=$MAX_HOOK
+        ;;
+    esac
+
+    if [ "$lines" -gt "$MAX_LIMIT" ]; then
+      echo "  ERROR: $file has $lines lines (max: $MAX_LIMIT)"
+      ERRORS=$((ERRORS + 1))
     fi
   fi
 done
-if [ -n "$OVERSIZED" ]; then
-  echo "pre-commit: Files exceed max line limit (R4):$OVERSIZED"
-  echo "Split files or use --no-verify to bypass."
+if [ "$ERRORS" -gt 0 ]; then
+  echo "pre-commit: $ERRORS file(s) exceed line limits (R4). Refactor before committing."
+  echo "  Use --no-verify to bypass in emergencies."
   exit 1
 fi
 

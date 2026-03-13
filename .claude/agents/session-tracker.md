@@ -41,12 +41,20 @@ All paths below are relative to PROJECT_ROOT.
    - On session close: ensure FIXES item moved to Resolved with root cause and fix description
    - Report orphan FIXES items (In Progress without active session)
 
+6. **Parallel Session Safety**
+   - Filter commits by current branch when documenting (`.pending-commits.log` includes BRANCH field)
+   - Only document commits from the session's own branch
+   - Context writes (README, BACKLOG) are serialized via `scripts/context-lock.sh`
+   - Code work is 100% parallelizable across branches
+
 ## Pending Commits Log Management
 
 ### Format
 ```
 STATUS|DATE|HASH|BRANCH|MESSAGE
 ```
+
+**Parallel safety**: When documenting commits for a session, filter by BRANCH field to only include commits from the session's own branch. This prevents cross-contamination between parallel sessions.
 
 ### States
 | State | Meaning | Transition |
