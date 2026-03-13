@@ -35,6 +35,9 @@ Read `.claude/project.config.json` to get project configuration.
 - `{recentSessionsToKeep}` = `config.workflow.recentSessionsToKeep` (default: 3)
 - `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
 - `{parallelEnabled}` = `config.parallel.enabled` (default: `true`)
+- `{worktreeEnabled}` = `config.parallel.worktree.enabled` (default: `true`)
+- `{worktreeDirectory}` = `config.parallel.worktree.directory` (default: `.claude/worktrees`)
+- `{baseBranch}` = `config.git.devBranch` if set, otherwise `config.git.mainBranch`
 - `{testMaxWorkers}` = `config.workflow.testMaxWorkers` (default: `2`)
 
 **Validation**: If `config.initialized === false`, warn but continue with defaults.
@@ -257,6 +260,43 @@ git commit -m "type(scope): description
 - If `true`: Add `Co-Authored-By: Claude <noreply@anthropic.com>` to commit message
 - If `false` (default): Do NOT include any AI attribution in the commit message
 
+### 8.5. Worktree Detection and Merge
+
+**8.5.0. Detect if we're in a worktree**:
+```bash
+GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null)
+# If GIT_COMMON != ".git", we're in a worktree
+```
+
+---
+
+**8.5.a. If in a worktree**:
+
+1. Record worktree data:
+   ```bash
+   WORKTREE_BRANCH=$(git branch --show-current)
+   WORKTREE_PATH=$(pwd)
+   MAIN_DIR=$(git worktree list --porcelain | head -1 | sed 's/worktree //')
+   ```
+
+2. Ask user if they want to merge to `{baseBranch}`:
+   - **If yes**:
+     ```bash
+     cd $MAIN_DIR
+     git checkout {baseBranch}
+     git merge $WORKTREE_BRANCH
+     ```
+   - Clean up worktree:
+     ```bash
+     git worktree remove $WORKTREE_PATH
+     git branch -d $WORKTREE_BRANCH   # Only if merged successfully
+     ```
+   - **If no**: leave the worktree active and branch unmerged
+
+---
+
+**8.5.b. If NOT in a worktree (normal flow)**: Continue to step 9.
+
 ### 9. Archive Session
 
 Move session from `context/tmp/` to `context/archive/{year}-{quarter}/sessions/`:
@@ -386,3 +426,5 @@ Confirm:
 | FIXES.md update failed | Manually update FIXES.md entries after /finish completes |
 | Context lock not released | Run `./scripts/context-lock.sh release` manually |
 | Lock script not found | Skip lock (parallel protection unavailable) |
+| In worktree but merge conflicts | Resolve conflicts in main dir, then `git worktree remove` |
+| Worktree remove fails | `git worktree remove --force {path}`, then `git branch -d {branch}` |

@@ -62,7 +62,12 @@
   "parallel": {
     "enabled": true,
     "lockTimeoutSeconds": 60,
-    "lockFile": "context/.context.lock"
+    "lockFile": "context/.context.lock",
+    "worktree": {
+      "enabled": true,
+      "directory": ".claude/worktrees",
+      "symlinkNodeModules": true
+    }
   },
   "mcp": {
     "installed": [],

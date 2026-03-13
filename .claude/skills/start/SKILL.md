@@ -23,6 +23,9 @@ Read `.claude/project.config.json` to get project configuration.
 - `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
 - `{staleThreshold}` = `config.workflow.staleSessionThreshold` (default: `24` hours)
 - `{parallelEnabled}` = `config.parallel.enabled` (default: `true`)
+- `{worktreeEnabled}` = `config.parallel.worktree.enabled` (default: `true`)
+- `{worktreeDirectory}` = `config.parallel.worktree.directory` (default: `.claude/worktrees`)
+- `{symlinkNodeModules}` = `config.parallel.worktree.symlinkNodeModules` (default: `true`)
 
 **Validation**: If `config.initialized === false`, suggest running `/setup` first.
 
@@ -137,6 +140,8 @@ If potential matches found, report to user:
 - "Found potentially related code: {files}. Should we proceed with a new implementation or extend existing?"
 
 ### 3. Create Branch
+
+**3.a. Without worktree (no active sessions, or worktree disabled)**:
 ```bash
 git checkout {baseBranch}
 git pull origin {baseBranch} 2>/dev/null || true
@@ -144,6 +149,48 @@ git checkout -b {branchPrefix}$ARGUMENTS
 ```
 
 Branch format: `{branchPrefix}descriptive-name` (kebab-case)
+
+**3.b. With worktree (parallel session — ≥1 active session AND `config.parallel.worktree.enabled`)**:
+
+1. Verify we're in the main directory (not inside an existing worktree):
+   ```bash
+   git rev-parse --git-common-dir
+   ```
+   If `GIT_COMMON_DIR != ".git"`, we're already in a worktree — inform user and do NOT create a nested worktree.
+
+2. Create worktrees directory if it doesn't exist:
+   ```bash
+   mkdir -p {worktreeDirectory}   # default: .claude/worktrees
+   ```
+
+3. Determine branch name: `{branchPrefix}{$ARGUMENTS}` (kebab-case)
+
+4. Create worktree with new branch from `{baseBranch}`:
+   ```bash
+   git worktree add {worktreeDirectory}/{branch-name} -b {branch-name} {baseBranch}
+   ```
+
+5. Symlink `node_modules` to avoid redundant `npm install` (if `config.parallel.worktree.symlinkNodeModules`):
+   ```bash
+   # Detect which directories have node_modules and symlink each
+   # Example for monorepo:
+   ln -s $(pwd)/node_modules {worktreeDirectory}/{branch-name}/node_modules
+   # For monorepo with backend/frontend:
+   ln -s $(pwd)/backend/node_modules {worktreeDirectory}/{branch-name}/backend/node_modules
+   ln -s $(pwd)/frontend/node_modules {worktreeDirectory}/{branch-name}/frontend/node_modules
+   ```
+
+6. Inform the user:
+   > "Parallel session detected ({N} active session(s)). Created worktree at `{worktreeDirectory}/{branch-name}/`."
+   > "**Note**: Docker is NOT available from the worktree (volumes mount the main directory). Integration tests should run from the main directory."
+
+7. Change working directory to the worktree to continue:
+   ```bash
+   cd {worktreeDirectory}/{branch-name}
+   ```
+
+> **IMPORTANT**: The session file (`context/tmp/session-{ID}.md`) is created in the worktree's context directory.
+> When the branch is merged back, the file will appear in the main directory.
 
 ### 3.5. Identify Relevant Agents
 
@@ -304,6 +351,9 @@ Skip silently if Context7 is not available or stack is not configured.
 | Context directories missing | Step 0.1 handles this automatically |
 | Context lock held by another operation | Wait for lock timeout ({lockTimeoutSeconds}s) or retry |
 | Lock script not found | Skip lock (parallel protection unavailable) |
+| Already inside a worktree | Do NOT create nested worktree — inform user, work in current worktree |
+| Worktree creation fails | Fall back to main directory (warn about parallel branch conflicts) |
+| node_modules symlink fails | Run `npm install` in worktree manually |
 
 ## Expected Output
 

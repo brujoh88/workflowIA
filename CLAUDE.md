@@ -152,12 +152,17 @@ Before modifying code to fix a bug:
   3. Apply with deploy command (e.g., `prisma migrate deploy`)
   4. Never use interactive migration commands in CI/hooks
 
-### R21. Parallel Sessions
-- Multiple Claude instances can work on different branches simultaneously
+### R21. Parallel Sessions (with Git Worktree)
+- **1 active session**: main directory, no worktree
+- **2+ active sessions**: each additional session uses a worktree in `{parallel.worktree.directory}/{branch}/` (default: `.claude/worktrees/`)
 - Context writes (README, BACKLOG, ROADMAP) are serialized via `scripts/context-lock.sh`
 - Code work is 100% parallelizable (no lock needed for coding)
 - Lock timeout: `parallel.lockTimeoutSeconds` (default: 60s)
+- Lock file always resolves to the **main worktree** directory (cross-worktree safe)
 - Each session filters commits by its own branch to prevent cross-contamination
+- **Worktree limitations**: Docker NOT available from worktree (volumes mount main dir), integration tests should run from main directory
+- `node_modules` are symlinked from main dir (no redundant `npm install`)
+- On `/finish`: worktree is merged and cleaned up (`git worktree remove`)
 
 ## Task Delegation
 
@@ -205,6 +210,7 @@ See `context/README.md` for:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.3 | 2026-03-13 | Git Worktree support for parallel sessions: worktree creation/cleanup in /start and /finish, worktree-aware lock script, config and documentation |
 | v2.2 | 2026-03-13 | 10 improvements from 127+ sessions: parallel sessions, per-type file limits, enhanced hooks, Docker/CPU/migrations rules, cross-section consistency, enhanced rotation |
 | v2.1 | 2026-03-12 | 9 improvements: /metrics, pre-commit hook, quality skills contract, stale detection, FIXES integration, error recovery, troubleshooting, skill rewrites |
 | v2.0 | 2026-03-12 | Backport from 124+ sessions: 17 rules, /audit skill, MEMORY, plans, FIXES, improved agents |

@@ -14,11 +14,20 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-LOCK_FILE="$PROJECT_ROOT/context/.context.lock"
+
+# Always use the lock from the main worktree (not from a worktree)
+# git worktree list returns the main worktree first
+MAIN_WORKTREE=$(git -C "$PROJECT_ROOT" worktree list --porcelain 2>/dev/null | head -1 | sed 's/worktree //')
+if [ -n "$MAIN_WORKTREE" ]; then
+  LOCK_FILE="$MAIN_WORKTREE/context/.context.lock"
+else
+  LOCK_FILE="$PROJECT_ROOT/context/.context.lock"
+fi
+
 TIMEOUT_SECONDS=60
 
-# Read timeout from project.config.json if available
-CONFIG_FILE="$PROJECT_ROOT/.claude/project.config.json"
+# Read timeout from project.config.json if available (from main worktree)
+CONFIG_FILE="${MAIN_WORKTREE:-$PROJECT_ROOT}/.claude/project.config.json"
 if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
   CUSTOM_TIMEOUT=$(jq -r '.parallel.lockTimeoutSeconds // 60' "$CONFIG_FILE" 2>/dev/null)
   if [ "$CUSTOM_TIMEOUT" -gt 0 ] 2>/dev/null; then

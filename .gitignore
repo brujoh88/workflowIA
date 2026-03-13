@@ -35,6 +35,9 @@ context/.context.lock
 # Test coverage
 coverage/
 
+# Claude worktrees (parallel sessions)
+.claude/worktrees/
+
 # Claude plans (local only)
 .claude/plan/
 !.claude/plan/.gitkeep

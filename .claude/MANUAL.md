@@ -190,38 +190,82 @@ Files are automatically rotated to prevent bloat:
 | BACKLOG > 300 lines | Move oldest completed to archive |
 | Plan completed | Move to `completados/` |
 
-## Parallel Sessions
+## Parallel Sessions (with Git Worktree)
 
-Multiple Claude instances can work on different branches simultaneously.
+Multiple Claude instances can work on different branches simultaneously using **git worktree** for code isolation.
 
-**Architecture**:
-- Code work is 100% parallelizable (each instance works on its own branch)
-- Context writes (README, BACKLOG, ROADMAP) are serialized via lock
-- Lock file: `context/.context.lock` (auto-created, auto-expired)
-- Lock script: `scripts/context-lock.sh`
+### Problem it solves
 
-**Lock operations**:
+Two terminals sharing the same directory have a single git checkout. If one changes branch, the other is affected. Git worktree creates independent working directories with separate branches.
+
+### Worktree rule
+
+- **1 active session**: main directory, no worktree
+- **2+ active sessions**: each additional session uses a worktree in `.claude/worktrees/{branch}/`
+
+### How it works
+
+**Principle**: "Serialize context, parallelize code"
+
+| Phase | Lock required | Parallel | Worktree |
+|-------|--------------|----------|----------|
+| `/start` (write session + README) | Yes | No | Created if ≥1 active session |
+| Implement code | No | Yes | Each terminal in its own worktree |
+| Run unit tests | No | Yes | Works in worktree |
+| Integration tests (DB) | No | Yes | Only from main directory |
+| `/review-code` | No | Yes | Works in worktree |
+| `/finish` (BACKLOG/ROADMAP + merge) | Yes | No | Merge from main directory |
+
+### Configuration
+
+In `project.config.json`:
+```json
+"parallel": {
+  "enabled": true,
+  "lockTimeoutSeconds": 60,
+  "lockFile": "context/.context.lock",
+  "worktree": {
+    "enabled": true,
+    "directory": ".claude/worktrees",
+    "symlinkNodeModules": true
+  }
+}
+```
+
+### Lock operations
+
 ```bash
 ./scripts/context-lock.sh acquire "session-id" "/start"   # Acquire lock
 ./scripts/context-lock.sh release                          # Release lock
 ./scripts/context-lock.sh check                            # Check status
 ```
 
-**Configuration** in `project.config.json`:
-```json
-"parallel": {
-  "enabled": true,
-  "lockTimeoutSeconds": 60,
-  "lockFile": "context/.context.lock"
-}
+The lock always points to the **main worktree** directory (cross-worktree safe). It auto-expires after `lockTimeoutSeconds` (default: 60s).
+
+### Typical flow with 2 sessions
+
+```
+Terminal 1 (main dir)            Terminal 2 (worktree)
+─────────────────────            ─────────────────────
+/start feature-A                 (wait if /start lock)
+                                 /start feature-B
+                                 → Detects active session
+                                 → Creates .claude/worktrees/feature-B/
+                                 → Symlinks node_modules
+[implement A]                    [implement B in worktree]
+/review-code                     /review-code
+/finish                          (wait if /finish lock)
+                                 /finish
+                                 → Merge feature-B to dev/main
+                                 → git worktree remove
 ```
 
-**When is the lock held?**
-- `/start`: during session file creation, README update, BACKLOG update
-- `/finish`: during session archive, BACKLOG cleanup, ROADMAP update
-- Released immediately after context writes complete
+### Worktree limitations
 
-**Timeout safety**: If a crash leaves the lock, it auto-expires after `lockTimeoutSeconds`.
+- **Docker NOT available** (volumes mount the main directory)
+- **Integration tests with DB** → run from main directory
+- **node_modules** are symlinked (no `npm install` needed in worktree)
+- **Nested worktrees** are not allowed — if already in a worktree, work there
 
 ## Configuration
 
@@ -233,7 +277,7 @@ All project settings live in `.claude/project.config.json`:
 - Code conventions (naming, commits)
 - Workflow thresholds (max file lines per type, rotation triggers, coverage, BACKLOG max lines, staleSessionThreshold, testMaxWorkers)
 - Quality settings (external skills — see Quality Skills Contract)
-- Parallel sessions (enabled, lock timeout, lock file path)
+- Parallel sessions (enabled, lock timeout, lock file path, worktree config)
 - MCP settings (installed, suggested)
 
 Run `/setup` to configure interactively.
@@ -292,7 +336,7 @@ Two hooks are installed via `git config core.hooksPath scripts/hooks`:
 | R18 | Docker Environment | DB commands inside container, non-interactive migrations |
 | R19 | CPU Limiting | Test workers capped at `testMaxWorkers` (default: 2) |
 | R20 | Migrations Protocol | Generate diff → review SQL → deploy (non-interactive) |
-| R21 | Parallel Sessions | Context writes serialized via lock, code work parallelizable |
+| R21 | Parallel Sessions | Git worktree for 2+ sessions, context serialized via lock, code parallelizable |
 
 ## Architecture Decision Records (ADR)
 
@@ -325,6 +369,9 @@ ADRs are preserved in session archives and consolidated feature docs.
 | Quality skill not found | Configured but not installed | Install via symlink or copy to `.claude/skills/` |
 | Context lock stuck | Crash during `/start` or `/finish` | Run `./scripts/context-lock.sh release` manually |
 | Parallel sessions conflict | Two operations writing context | Lock auto-expires after `lockTimeoutSeconds` (default: 60s) |
+| Worktree not cleaned up | `/finish` interrupted before cleanup | `git worktree remove .claude/worktrees/{branch}` manually |
+| Docker unavailable in worktree | Worktree limitation | Run Docker commands from main directory |
+| Nested worktree attempted | `/start` from inside a worktree | Work in current worktree, don't nest |
 
 ## Tips
 
@@ -343,6 +390,7 @@ ADRs are preserved in session archives and consolidated feature docs.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.3 | 2026-03-13 | Git Worktree for parallel sessions: worktree creation/cleanup in /start and /finish, worktree-aware lock, config, limitations, troubleshooting |
 | v2.2 | 2026-03-13 | 10 improvements from 127+ sessions: parallel sessions, per-type file limits, enhanced hooks, Docker/CPU/migrations rules, cross-section consistency, enhanced rotation |
 | v2.1 | 2026-03-12 | /metrics skill, pre-commit hook, quality skills contract, stale session detection, FIXES integration, error recovery sections, troubleshooting, skill rewrites (fix-issue, deploy, explore-code) |
 | v2.0 | 2026-03-12 | 17 rules, /audit, MEMORY, plans, FIXES, Context7, improved agents |
