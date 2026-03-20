@@ -35,8 +35,8 @@ context/.context.lock
 # Test coverage
 coverage/
 
-# Claude worktrees (parallel sessions)
-.claude/worktrees/
+# Claude parallel sessions (coordination files)
+context/.parallel/
 
 # Claude plans (local only)
 .claude/plan/

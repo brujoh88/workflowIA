@@ -190,31 +190,68 @@ Files are automatically rotated to prevent bloat:
 | BACKLOG > 300 lines | Move oldest completed to archive |
 | Plan completed | Move to `completados/` |
 
-## Parallel Sessions (with Git Worktree)
+## Parallel Sessions (Shared Branch)
 
-Multiple Claude instances can work on different branches simultaneously using **git worktree** for code isolation.
+Multiple Claude instances can work on different features simultaneously by sharing a combined feature branch with atomic commits per scope.
 
 ### Problem it solves
 
-Two terminals sharing the same directory have a single git checkout. If one changes branch, the other is affected. Git worktree creates independent working directories with separate branches.
+Two terminals sharing the same directory have a single git checkout. Instead of using git worktrees (which have Docker and integration test limitations), sessions share a single feature branch with a combined name and coordinate via `state.json` and `channel.md`.
 
-### Worktree rule
+### Shared branch rule
 
-- **1 active session**: main directory, no worktree
-- **2+ active sessions**: each additional session uses a worktree in `.claude/worktrees/{branch}/`
+- **1 active session**: normal feature branch, no special handling
+- **2+ active sessions**: sessions share a combined feature branch (e.g., `feature/A--B`)
 
 ### How it works
 
 **Principle**: "Serialize context, parallelize code"
 
-| Phase | Lock required | Parallel | Worktree |
-|-------|--------------|----------|----------|
-| `/start` (write session + README) | Yes | No | Created if ≥1 active session |
-| Implement code | No | Yes | Each terminal in its own worktree |
-| Run unit tests | No | Yes | Works in worktree |
-| Integration tests (DB) | No | Yes | Only from main directory |
-| `/review-code` | No | Yes | Works in worktree |
-| `/finish` (BACKLOG/ROADMAP + merge) | Yes | No | Merge from main directory |
+When parallel mode is activated, the existing feature branch is renamed to reflect both features (e.g., `feature/egreso-backend--dashboard-frontend`). Both sessions work on that branch and coordinate via files in `{sharedBranchDirectory}/`. When the last session finishes, the branch is merged to the base branch like any feature branch.
+
+| Phase | Lock required | Parallel |
+|-------|--------------|----------|
+| `/start` (write session + README) | Yes | No |
+| Implement code | No | Yes |
+| Run tests | No | Yes |
+| `/review-code` | No | Yes |
+| `/finish` (BACKLOG/ROADMAP + commit) | Yes | No |
+
+### Coordination between sessions
+
+```
+context/.parallel/           (gitignored)
+├── state.json               # Active sessions, domains, shared branch
+└── channel.md               # Messages between sessions
+```
+
+**state.json** — Each session registers which modules it touches:
+```json
+{
+  "branch": "feature/feature-A--feature-B",
+  "sessions": {
+    "session-001": {
+      "feature": "feature-A",
+      "domain": ["src/module-a/"],
+      "status": "active",
+      "start": "2026-03-20T10:00:00"
+    },
+    "session-002": {
+      "feature": "feature-B",
+      "domain": ["src/module-b/"],
+      "status": "active",
+      "start": "2026-03-20T10:05:00"
+    }
+  }
+}
+```
+
+**channel.md** — Messages to pass context between sessions:
+```markdown
+### [10:30] session-002 → all
+Parallel mode activated. Branch renamed to `feature/feature-A--feature-B`.
+My domain: src/module-b/. Commits with scope: `feat(module-b)`.
+```
 
 ### Configuration
 
@@ -224,10 +261,10 @@ In `project.config.json`:
   "enabled": true,
   "lockTimeoutSeconds": 60,
   "lockFile": "context/.context.lock",
-  "worktree": {
+  "sharedBranch": {
     "enabled": true,
-    "directory": ".claude/worktrees",
-    "symlinkNodeModules": true
+    "directory": "context/.parallel",
+    "atomicCommits": true
   }
 }
 ```
@@ -240,32 +277,46 @@ In `project.config.json`:
 ./scripts/context-lock.sh check                            # Check status
 ```
 
-The lock always points to the **main worktree** directory (cross-worktree safe). It auto-expires after `lockTimeoutSeconds` (default: 60s).
+Lock auto-expires after `lockTimeoutSeconds` (default: 60s).
 
 ### Typical flow with 2 sessions
 
 ```
-Terminal 1 (main dir)            Terminal 2 (worktree)
-─────────────────────            ─────────────────────
-/start feature-A                 (wait if /start lock)
-                                 /start feature-B
-                                 → Detects active session
-                                 → Creates .claude/worktrees/feature-B/
-                                 → Symlinks node_modules
-[implement A]                    [implement B in worktree]
-/review-code                     /review-code
-/finish                          (wait if /finish lock)
-                                 /finish
-                                 → Merge feature-B to dev/main
-                                 → git worktree remove
+Terminal 1                           Terminal 2
+──────────                           ──────────
+/start feature-A
+  → creates feature/feature-A
+  → works...
+                                     /start feature-B
+                                       → Detects active session
+                                       → Asks: "Work in parallel?"
+                                       → Renames branch to feature/feature-A--feature-B
+                                       → Registers BOTH sessions in state.json
+                                       → Writes to channel.md
+                                       → "Inform Terminal 1 of branch rename"
+[user informs: branch renamed]
+[implement A]                        [implement B]
+  git commit files-A                   git commit files-B
+  (scope: feat(feature-A))            (scope: feat(feature-B))
+/review-code                         /review-code
+/finish                              (wait if /finish lock)
+  → final commit                     /finish
+  → removes from state.json            → final commit
+                                        → cleans up .parallel/ (last session)
+                                        → merge feature/A--B to base branch?
 ```
 
-### Worktree limitations
+### Rules in parallel mode
 
-- **Docker NOT available** (volumes mount the main directory)
-- **Integration tests with DB** → run from main directory
-- **node_modules** are symlinked (no `npm install` needed in worktree)
-- **Nested worktrees** are not allowed — if already in a worktree, work there
+- **Both sessions registered**: `state.json` contains both sessions with their domains
+- **Shared branch**: The feature branch has a combined name (e.g., `feature/A--B`)
+- **Atomic commits**: `git commit <files> -m "feat(scope): ..."` (NEVER `git add .`)
+- **Verify domain**: Before editing, check that the file is not in another session's domain
+- **Communicate decisions**: Write to `channel.md` with format `### [HH:MM] session-XXX → all`
+- **Local files**: `state.json` and `channel.md` are gitignored — NOT committed, coordination only
+- **Merge at end**: The last session to finish merges the shared branch to base branch
+- **Cleanup**: The last session deletes `context/.parallel/` completely
+- Docker and tests work normally (same directory)
 
 ## Configuration
 
@@ -277,7 +328,7 @@ All project settings live in `.claude/project.config.json`:
 - Code conventions (naming, commits)
 - Workflow thresholds (max file lines per type, rotation triggers, coverage, BACKLOG max lines, staleSessionThreshold, testMaxWorkers)
 - Quality settings (external skills — see Quality Skills Contract)
-- Parallel sessions (enabled, lock timeout, lock file path, worktree config)
+- Parallel sessions (enabled, lock timeout, lock file path, shared branch config)
 - MCP settings (installed, suggested)
 
 Run `/setup` to configure interactively.
@@ -336,7 +387,7 @@ Two hooks are installed via `git config core.hooksPath scripts/hooks`:
 | R18 | Docker Environment | DB commands inside container, non-interactive migrations |
 | R19 | CPU Limiting | Test workers capped at `testMaxWorkers` (default: 2) |
 | R20 | Migrations Protocol | Generate diff → review SQL → deploy (non-interactive) |
-| R21 | Parallel Sessions | Git worktree for 2+ sessions, context serialized via lock, code parallelizable |
+| R21 | Parallel Sessions | Shared branch for 2+ sessions, context serialized via lock, atomic commits per scope |
 
 ## Architecture Decision Records (ADR)
 
@@ -369,9 +420,9 @@ ADRs are preserved in session archives and consolidated feature docs.
 | Quality skill not found | Configured but not installed | Install via symlink or copy to `.claude/skills/` |
 | Context lock stuck | Crash during `/start` or `/finish` | Run `./scripts/context-lock.sh release` manually |
 | Parallel sessions conflict | Two operations writing context | Lock auto-expires after `lockTimeoutSeconds` (default: 60s) |
-| Worktree not cleaned up | `/finish` interrupted before cleanup | `git worktree remove .claude/worktrees/{branch}` manually |
-| Docker unavailable in worktree | Worktree limitation | Run Docker commands from main directory |
-| Nested worktree attempted | `/start` from inside a worktree | Work in current worktree, don't nest |
+| state.json corrupted | Crash during parallel session setup | Delete `context/.parallel/state.json`, proceed as normal |
+| Parallel cleanup not done | `/finish` interrupted before cleanup | Delete `context/.parallel/` manually |
+| File domain conflict | Two sessions editing same files | Check `state.json` domains, coordinate via `channel.md` |
 
 ## Tips
 
@@ -390,6 +441,7 @@ ADRs are preserved in session archives and consolidated feature docs.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.4 | 2026-03-20 | Replace Git Worktree with Shared Branch for parallel sessions: combined feature branch, state.json + channel.md coordination, atomic commits per scope, simplified context-lock.sh |
 | v2.3 | 2026-03-13 | Git Worktree for parallel sessions: worktree creation/cleanup in /start and /finish, worktree-aware lock, config, limitations, troubleshooting |
 | v2.2 | 2026-03-13 | 10 improvements from 127+ sessions: parallel sessions, per-type file limits, enhanced hooks, Docker/CPU/migrations rules, cross-section consistency, enhanced rotation |
 | v2.1 | 2026-03-12 | /metrics skill, pre-commit hook, quality skills contract, stale session detection, FIXES integration, error recovery sections, troubleshooting, skill rewrites (fix-issue, deploy, explore-code) |

@@ -152,17 +152,17 @@ Before modifying code to fix a bug:
   3. Apply with deploy command (e.g., `prisma migrate deploy`)
   4. Never use interactive migration commands in CI/hooks
 
-### R21. Parallel Sessions (with Git Worktree)
-- **1 active session**: main directory, no worktree
-- **2+ active sessions**: each additional session uses a worktree in `{parallel.worktree.directory}/{branch}/` (default: `.claude/worktrees/`)
+### R21. Parallel Sessions (Shared Branch)
+- **1 active session**: normal feature branch, no special handling
+- **2+ active sessions**: sessions share a combined feature branch (e.g., `feature/A--B`)
 - Context writes (README, BACKLOG, ROADMAP) are serialized via `scripts/context-lock.sh`
 - Code work is 100% parallelizable (no lock needed for coding)
 - Lock timeout: `parallel.lockTimeoutSeconds` (default: 60s)
-- Lock file always resolves to the **main worktree** directory (cross-worktree safe)
-- Each session filters commits by its own branch to prevent cross-contamination
-- **Worktree limitations**: Docker NOT available from worktree (volumes mount main dir), integration tests should run from main directory
-- `node_modules` are symlinked from main dir (no redundant `npm install`)
-- On `/finish`: worktree is merged and cleaned up (`git worktree remove`)
+- Coordination via `{parallel.sharedBranch.directory}/state.json` + `channel.md` (gitignored)
+- Each session commits only its own files with atomic commits (`git commit <files> -m "..."`)
+- **NEVER** use `git add .` or `git add -A` in parallel mode
+- Verify file domain in `state.json` before editing (avoid stepping on other session's files)
+- On `/finish`: last session cleans up coordination directory and optionally merges to base branch
 
 ## Task Delegation
 
@@ -210,6 +210,7 @@ See `context/README.md` for:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.4 | 2026-03-20 | Replace Git Worktree with Shared Branch for parallel sessions: combined feature branch (`feature/A--B`), `state.json` + `channel.md` coordination, atomic commits per scope, simplified `context-lock.sh` |
 | v2.3 | 2026-03-13 | Git Worktree support for parallel sessions: worktree creation/cleanup in /start and /finish, worktree-aware lock script, config and documentation |
 | v2.2 | 2026-03-13 | 10 improvements from 127+ sessions: parallel sessions, per-type file limits, enhanced hooks, Docker/CPU/migrations rules, cross-section consistency, enhanced rotation |
 | v2.1 | 2026-03-12 | 9 improvements: /metrics, pre-commit hook, quality skills contract, stale detection, FIXES integration, error recovery, troubleshooting, skill rewrites |

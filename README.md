@@ -5,7 +5,7 @@
 
 **[Leer en Español](README.es.md)**
 
-A battle-tested project template for AI-assisted development with Claude Code. Provides session tracking, structured workflows, 9 specialized agents, 17 enforced rules, and full development traceability out of the box. Born from 124+ real development sessions.
+A battle-tested project template for AI-assisted development with Claude Code. Provides session tracking, structured workflows, 9 specialized agents, 21 enforced rules, parallel sessions support, and full development traceability out of the box. Born from 124+ real development sessions.
 
 ## Features
 
@@ -19,7 +19,8 @@ A battle-tested project template for AI-assisted development with Claude Code. P
 - **FIXES Registry** - Centralized bug tracking with quick/complex/batch workflows
 - **MEMORY System** - Persistent lessons learned across sessions
 - **Implementation Plans** - Structured plan workflow with archiving
-- **17 Enforced Rules** - Battle-tested development practices
+- **21 Enforced Rules** - Battle-tested development practices
+- **Parallel Sessions** - Shared branch support for 2+ Claude instances working simultaneously
 - **Post-Commit Hook** - Automatic commit registration with anti-loop protection
 - **Context7 Integration** - Up-to-date library documentation during development
 - **Archive Rotation** - Smart cleanup keeping recent sessions, compressing old ones
@@ -87,8 +88,13 @@ flowchart TD
     D0 --> D1[Load Context + MEMORY]
     D1 --> D2[Check BACKLOG + ROADMAP + FIXES]
     D2 --> D3[Verify no duplicates]
-    D3 --> E[Creates feature branch]
-    E --> F[Suggest agents + quality skills]
+    D3 --> D4{Active sessions?}
+    D4 -->|0| E1[Create feature branch]
+    D4 -->|≥1| E2{Work in parallel?}
+    E2 -->|Yes| E3[Rename to shared branch A--B]
+    E2 -->|No| E1
+    E3 --> F
+    E1 --> F[Suggest agents + quality skills]
     F --> G[Creates session + Context7]
     G --> H[Development Work]
 
@@ -103,8 +109,14 @@ flowchart TD
     J0 --> K[Run tests + lint]
     K --> L{Tests pass?}
     L -->|No| H
-    L -->|Yes| M[Create commit]
-    M --> N[Mark BACKLOG + cleanup]
+    L -->|Yes| M{Parallel mode?}
+    M -->|Yes| M1[Atomic commit own files]
+    M -->|No| M2[Normal commit]
+    M1 --> M3{Last session?}
+    M3 -->|Yes| M4[Cleanup + merge]
+    M3 -->|No| N
+    M4 --> N
+    M2 --> N[Mark BACKLOG + cleanup]
     N --> O[Update ROADMAP + propagate deps]
     O --> P[Archive session + plan]
     P --> Q[Smart rotation]
@@ -140,6 +152,7 @@ flowchart TD
 │   │   ├── explore-code/         # Code exploration
 │   │   ├── fix-issue/            # Bug fix workflow
 │   │   ├── deploy/               # Deployment workflow
+│   │   ├── metrics/              # Project metrics dashboard
 │   │   └── mcp/                  # MCP server management
 │   ├── agents/                   # 9 specialized agents
 │   │   ├── session-tracker.md    # Session lifecycle + anti-loop commits
@@ -170,9 +183,11 @@ flowchart TD
 │   ├── auditorias/               # Audit reports [NEW]
 │   └── consolidated/             # Per-feature documentation
 ├── scripts/
+│   ├── context-lock.sh           # Distributed lock for parallel sessions
 │   └── hooks/
+│       ├── pre-commit            # Lint, file size (R4), TypeScript errors (R16)
 │       └── post-commit           # Auto-registers commits (with anti-loop)
-├── CLAUDE.md                     # Project instructions (17 rules + routing)
+├── CLAUDE.md                     # Project instructions (21 rules + routing)
 └── CLAUDE.local.md               # Local config (gitignored)
 ```
 
@@ -204,6 +219,7 @@ flowchart TD
 | `/explore-code` | Navigate and understand codebase |
 | `/fix-issue` | Guided debugging workflow (3 hypotheses) |
 | `/deploy` | Build, verify, and deploy |
+| `/metrics` | Project metrics and health dashboard (read-only) |
 | `/mcp` | Search, install, configure MCP servers |
 
 ## Configuration
@@ -230,18 +246,23 @@ All configuration is stored in `.claude/project.config.json`:
     "backlogMaxLines": 300, "recentSessionsToKeep": 3, "coverageThreshold": 80
   },
   "quality": { "externalSkills": [] },
+  "parallel": {
+    "enabled": true, "lockTimeoutSeconds": 60,
+    "lockFile": "context/.context.lock",
+    "sharedBranch": { "enabled": true, "directory": "context/.parallel", "atomicCommits": true }
+  },
   "initialized": true
 }
 ```
 
-## Enforced Rules (17)
+## Enforced Rules (21)
 
 | # | Rule | Description |
 |---|------|-------------|
 | R1 | Language | Respond/code in configured language |
 | R2 | Git Flow | main protected, dev branch support |
 | R3 | Commits | Co-Authored-By configurable |
-| R4 | File Size | Enforce max lines from config |
+| R4 | File Size | Enforce per-type max lines from config |
 | R5 | Testing | Coverage BEFORE/AFTER, threshold target |
 | R6 | Verify First | Glob+Grep before creating |
 | R7 | BACKLOG Compaction | Stay under max lines |
@@ -255,6 +276,10 @@ All configuration is stored in `.claude/project.config.json`:
 | R15 | Quality Skills | Frontend quality checks |
 | R16 | LSP Diagnostics | Type errors are blockers |
 | R17 | Sync MANUAL | Keep docs up to date |
+| R18 | Docker Environment | DB commands inside container |
+| R19 | CPU Limiting | Test workers capped |
+| R20 | Migrations Protocol | Generate diff, review, deploy |
+| R21 | Parallel Sessions | Shared branch, atomic commits, context lock |
 
 ## Requirements
 

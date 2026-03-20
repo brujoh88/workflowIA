@@ -35,8 +35,9 @@ Read `.claude/project.config.json` to get project configuration.
 - `{recentSessionsToKeep}` = `config.workflow.recentSessionsToKeep` (default: 3)
 - `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
 - `{parallelEnabled}` = `config.parallel.enabled` (default: `true`)
-- `{worktreeEnabled}` = `config.parallel.worktree.enabled` (default: `true`)
-- `{worktreeDirectory}` = `config.parallel.worktree.directory` (default: `.claude/worktrees`)
+- `{sharedBranchEnabled}` = `config.parallel.sharedBranch.enabled` (default: `true`)
+- `{sharedBranchDirectory}` = `config.parallel.sharedBranch.directory` (default: `context/.parallel`)
+- `{atomicCommits}` = `config.parallel.sharedBranch.atomicCommits` (default: `true`)
 - `{baseBranch}` = `config.git.devBranch` if set, otherwise `config.git.mainBranch`
 - `{testMaxWorkers}` = `config.workflow.testMaxWorkers` (default: `2`)
 
@@ -239,6 +240,82 @@ Evaluate overall feature completeness:
 
 ### 8. Create Commit
 
+**8.0. Detect if we're in parallel mode (shared branch)**:
+
+```bash
+# Check if THIS session is registered in parallel mode
+# Use quotes for exact match (prevent "session-14" matching "session-142")
+SESSION_ID="session-XXX"  # Replace with actual session ID
+if [ -f {sharedBranchDirectory}/state.json ] && grep -q "\"$SESSION_ID\"" {sharedBranchDirectory}/state.json; then
+  echo "PARALLEL"
+else
+  echo "NORMAL"
+fi
+```
+
+> **IMPORTANT**: It's not enough that `state.json` exists. THIS session must be registered in it.
+> If `state.json` exists but this session is NOT registered, follow the NORMAL flow (8.b).
+
+---
+
+**8.a. If in parallel mode (shared branch)**:
+
+Conventional Commits - determine type based on changes:
+- `feat` - New feature
+- `fix` - Bug fix
+- `refactor` - Refactoring
+- `test` - Tests
+- `docs` - Documentation
+- `chore` - Maintenance
+
+1. Identify files owned by this session (do NOT include files from other session):
+   ```bash
+   # List modified/created files
+   git status --porcelain
+   ```
+   Verify against `state.json` that files belong to this session's domain.
+   If files are outside this session's domain, ask user before including them.
+
+2. Atomic commit (stage + commit in one command to avoid conflicts with other session):
+   ```bash
+   git commit file1 file2 context/tmp/session-XXX.md -m "feat(scope): description"
+   ```
+   - **NEVER** use `git add .` or `git add -A` in parallel mode
+   - Commit scope MUST match this session's feature name
+   - Context shared files (BACKLOG.md, ROADMAP.md, README.md) are included in this commit
+
+3. Write closing message in `channel.md`:
+   ```markdown
+   ### [HH:MM] session-XXX → all
+   Session finished. Commits: {list of commits}. Feature: {name}.
+   Context files updated: BACKLOG, ROADMAP.
+   ```
+
+4. Update `{sharedBranchDirectory}/state.json`: remove this session from the `sessions` object.
+
+5. If this session is the LAST in `state.json` (sessions object is empty or has no active sessions):
+   ```bash
+   rm -rf {sharedBranchDirectory}
+   ```
+   **Ask user if they want to merge to `{baseBranch}`** (like any feature branch):
+   - If yes:
+     ```bash
+     git checkout {baseBranch}
+     git merge {branchPrefix}{A}--{B}
+     git branch -d {branchPrefix}{A}--{B}
+     ```
+   - If no: leave on the shared branch
+
+6. If **NOT the last session** → do not merge, the other session is still working on the branch.
+
+**IMPORTANT on Co-Authored-By**: Check `config.git.coAuthoredBy`:
+- If `true`: Add `Co-Authored-By: Claude <noreply@anthropic.com>` to commit message
+- If `false` (default): Do NOT include any AI attribution in the commit message
+
+---
+
+**8.b. Normal flow (no parallel, on feature branch)**:
+
 Conventional Commits - determine type based on changes:
 - `feat` - New feature
 - `fix` - Bug fix
@@ -248,7 +325,7 @@ Conventional Commits - determine type based on changes:
 - `chore` - Maintenance
 
 ```bash
-git add -A
+git add file1 file2   # Specific files, do NOT use -A without reviewing
 git commit -m "type(scope): description
 
 - Main changes detail
@@ -260,42 +337,14 @@ git commit -m "type(scope): description
 - If `true`: Add `Co-Authored-By: Claude <noreply@anthropic.com>` to commit message
 - If `false` (default): Do NOT include any AI attribution in the commit message
 
-### 8.5. Worktree Detection and Merge
-
-**8.5.0. Detect if we're in a worktree**:
-```bash
-GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null)
-# If GIT_COMMON != ".git", we're in a worktree
-```
-
----
-
-**8.5.a. If in a worktree**:
-
-1. Record worktree data:
-   ```bash
-   WORKTREE_BRANCH=$(git branch --show-current)
-   WORKTREE_PATH=$(pwd)
-   MAIN_DIR=$(git worktree list --porcelain | head -1 | sed 's/worktree //')
-   ```
-
-2. Ask user if they want to merge to `{baseBranch}`:
-   - **If yes**:
-     ```bash
-     cd $MAIN_DIR
-     git checkout {baseBranch}
-     git merge $WORKTREE_BRANCH
-     ```
-   - Clean up worktree:
-     ```bash
-     git worktree remove $WORKTREE_PATH
-     git branch -d $WORKTREE_BRANCH   # Only if merged successfully
-     ```
-   - **If no**: leave the worktree active and branch unmerged
-
----
-
-**8.5.b. If NOT in a worktree (normal flow)**: Continue to step 9.
+Ask user if they want to merge to `{baseBranch}`:
+- If yes:
+  ```bash
+  git checkout {baseBranch}
+  git merge {branchPrefix}{feature}
+  git branch -d {branchPrefix}{feature}
+  ```
+- If no: leave on feature branch
 
 ### 9. Archive Session
 
@@ -426,5 +475,6 @@ Confirm:
 | FIXES.md update failed | Manually update FIXES.md entries after /finish completes |
 | Context lock not released | Run `./scripts/context-lock.sh release` manually |
 | Lock script not found | Skip lock (parallel protection unavailable) |
-| In worktree but merge conflicts | Resolve conflicts in main dir, then `git worktree remove` |
-| Worktree remove fails | `git worktree remove --force {path}`, then `git branch -d {branch}` |
+| Parallel session conflict on shared files | Verify domain in state.json, ask user before including disputed files |
+| state.json corrupted | Delete `{sharedBranchDirectory}/state.json`, proceed as normal flow |
+| Shared branch merge conflicts | Resolve conflicts, commit, then re-run /finish |

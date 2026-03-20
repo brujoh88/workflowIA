@@ -5,7 +5,7 @@
 
 **[Read in English](README.md)**
 
-Template de proyecto battle-tested para desarrollo asistido por IA con Claude Code. Proporciona seguimiento de sesiones, flujos de trabajo estructurados, 9 agentes especializados, 17 reglas enforced y trazabilidad completa del desarrollo. Nacido de 124+ sesiones reales de desarrollo.
+Template de proyecto battle-tested para desarrollo asistido por IA con Claude Code. Proporciona seguimiento de sesiones, flujos de trabajo estructurados, 9 agentes especializados, 21 reglas enforced, soporte de sesiones paralelas y trazabilidad completa del desarrollo. Nacido de 124+ sesiones reales de desarrollo.
 
 ## Caracteristicas
 
@@ -19,7 +19,8 @@ Template de proyecto battle-tested para desarrollo asistido por IA con Claude Co
 - **Registro de FIXES** - Tracking centralizado de bugs con flujos rapido/complejo/batch
 - **Sistema MEMORY** - Lecciones aprendidas persistentes entre sesiones
 - **Planes de Implementacion** - Flujo estructurado de planes con archivado
-- **17 Reglas Enforced** - Practicas de desarrollo probadas en produccion
+- **21 Reglas Enforced** - Practicas de desarrollo probadas en produccion
+- **Sesiones Paralelas** - Soporte de rama compartida para 2+ instancias de Claude trabajando simultaneamente
 - **Post-Commit Hook** - Registro automatico de commits con proteccion anti-loop
 - **Integracion Context7** - Documentacion actualizada de librerias durante desarrollo
 - **Rotacion Inteligente** - Limpieza manteniendo sesiones recientes, comprimiendo antiguas
@@ -87,8 +88,13 @@ flowchart TD
     D0 --> D1[Cargar Contexto + MEMORY]
     D1 --> D2[Consultar BACKLOG + ROADMAP + FIXES]
     D2 --> D3[Verificar no duplicados]
-    D3 --> E[Crear branch de feature]
-    E --> F[Sugerir agentes + quality skills]
+    D3 --> D4{Sesiones activas?}
+    D4 -->|0| E1[Crear branch de feature]
+    D4 -->|≥1| E2{Trabajar en paralelo?}
+    E2 -->|Si| E3[Renombrar a rama compartida A--B]
+    E2 -->|No| E1
+    E3 --> F
+    E1 --> F[Sugerir agentes + quality skills]
     F --> G[Crear sesion + Context7]
     G --> H[Trabajo de Desarrollo]
 
@@ -103,8 +109,14 @@ flowchart TD
     J0 --> K[Ejecutar tests + lint]
     K --> L{Tests pasan?}
     L -->|No| H
-    L -->|Si| M[Crear commit]
-    M --> N[Marcar BACKLOG + limpieza]
+    L -->|Si| M{Modo paralelo?}
+    M -->|Si| M1[Commit atomico archivos propios]
+    M -->|No| M2[Commit normal]
+    M1 --> M3{Ultima sesion?}
+    M3 -->|Si| M4[Cleanup + merge]
+    M3 -->|No| N
+    M4 --> N
+    M2 --> N[Marcar BACKLOG + limpieza]
     N --> O[Actualizar ROADMAP + propagar deps]
     O --> P[Archivar sesion + plan]
     P --> Q[Rotacion inteligente]
@@ -140,6 +152,7 @@ flowchart TD
 │   │   ├── explore-code/         # Exploracion de codigo
 │   │   ├── fix-issue/            # Flujo de correccion de bugs
 │   │   ├── deploy/               # Flujo de deployment
+│   │   ├── metrics/              # Dashboard de metricas del proyecto
 │   │   └── mcp/                  # Gestion de MCP servers
 │   ├── agents/                   # 9 agentes especializados
 │   │   ├── session-tracker.md    # Ciclo de vida + commits anti-loop
@@ -170,9 +183,11 @@ flowchart TD
 │   ├── auditorias/               # Reportes de auditoria [NUEVO]
 │   └── consolidated/             # Documentacion por feature completado
 ├── scripts/
+│   ├── context-lock.sh           # Lock distribuido para sesiones paralelas
 │   └── hooks/
+│       ├── pre-commit            # Lint, tamano archivos (R4), errores TypeScript (R16)
 │       └── post-commit           # Auto-registra commits (con anti-loop)
-├── CLAUDE.md                     # Instrucciones del proyecto (17 reglas + routing)
+├── CLAUDE.md                     # Instrucciones del proyecto (21 reglas + routing)
 └── CLAUDE.local.md               # Config local (no se commitea)
 ```
 
@@ -204,6 +219,7 @@ flowchart TD
 | `/explore-code` | Navegar y entender el codebase |
 | `/fix-issue` | Flujo guiado de debugging (3 hipotesis) |
 | `/deploy` | Build, verificar y deploy |
+| `/metrics` | Dashboard de metricas y salud del proyecto (solo lectura) |
 | `/mcp` | Buscar, instalar, configurar MCP servers |
 
 ## Configuracion
@@ -230,18 +246,23 @@ Toda la configuracion se guarda en `.claude/project.config.json`:
     "backlogMaxLines": 300, "recentSessionsToKeep": 3, "coverageThreshold": 80
   },
   "quality": { "externalSkills": [] },
+  "parallel": {
+    "enabled": true, "lockTimeoutSeconds": 60,
+    "lockFile": "context/.context.lock",
+    "sharedBranch": { "enabled": true, "directory": "context/.parallel", "atomicCommits": true }
+  },
   "initialized": true
 }
 ```
 
-## Reglas Enforced (17)
+## Reglas Enforced (21)
 
 | # | Regla | Descripcion |
 |---|-------|-------------|
 | R1 | Idioma | Responder/codear en idioma configurado |
 | R2 | Git Flow | main protegida, soporte branch dev |
 | R3 | Commits | Co-Authored-By configurable |
-| R4 | Tamano archivos | Enforce max lineas desde config |
+| R4 | Tamano archivos | Enforce max lineas por tipo desde config |
 | R5 | Testing | Cobertura ANTES/DESPUES, umbral objetivo |
 | R6 | Verificar primero | Glob+Grep antes de crear |
 | R7 | Compactacion BACKLOG | Mantener bajo max lineas |
@@ -255,6 +276,10 @@ Toda la configuracion se guarda en `.claude/project.config.json`:
 | R15 | Quality Skills | Chequeos de calidad frontend |
 | R16 | Diagnosticos LSP | Errores de tipo son bloqueantes |
 | R17 | Sync MANUAL | Mantener docs actualizados |
+| R18 | Entorno Docker | Comandos DB dentro del container |
+| R19 | Limite CPU | Workers de tests limitados |
+| R20 | Protocolo Migraciones | Generar diff, revisar, deploy |
+| R21 | Sesiones Paralelas | Rama compartida, commits atomicos, context lock |
 
 ## Requisitos
 

@@ -23,9 +23,9 @@ Read `.claude/project.config.json` to get project configuration.
 - `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
 - `{staleThreshold}` = `config.workflow.staleSessionThreshold` (default: `24` hours)
 - `{parallelEnabled}` = `config.parallel.enabled` (default: `true`)
-- `{worktreeEnabled}` = `config.parallel.worktree.enabled` (default: `true`)
-- `{worktreeDirectory}` = `config.parallel.worktree.directory` (default: `.claude/worktrees`)
-- `{symlinkNodeModules}` = `config.parallel.worktree.symlinkNodeModules` (default: `true`)
+- `{sharedBranchEnabled}` = `config.parallel.sharedBranch.enabled` (default: `true`)
+- `{sharedBranchDirectory}` = `config.parallel.sharedBranch.directory` (default: `context/.parallel`)
+- `{atomicCommits}` = `config.parallel.sharedBranch.atomicCommits` (default: `true`)
 
 **Validation**: If `config.initialized === false`, suggest running `/setup` first.
 
@@ -139,9 +139,22 @@ Glob: src/**/*{feature-name-parts}*
 If potential matches found, report to user:
 - "Found potentially related code: {files}. Should we proceed with a new implementation or extend existing?"
 
-### 3. Create Branch
+### 3. Create Branch and Detect Parallel Sessions
 
-**3.a. Without worktree (no active sessions, or worktree disabled)**:
+**3.1. Detect active sessions**:
+```bash
+grep -rl "Status.*IN_PROGRESS" context/tmp/session-*.md 2>/dev/null | wc -l
+```
+
+**3.2. Decide work mode**:
+
+| Active sessions | Action |
+|----------------|--------|
+| 0 | Normal mode: create feature branch from `{baseBranch}` |
+| ≥1 | Ask user if they want to work in parallel |
+
+**3.3a. Normal mode (0 active sessions)**:
+
 ```bash
 git checkout {baseBranch}
 git pull origin {baseBranch} 2>/dev/null || true
@@ -150,47 +163,89 @@ git checkout -b {branchPrefix}$ARGUMENTS
 
 Branch format: `{branchPrefix}descriptive-name` (kebab-case)
 
-**3.b. With worktree (parallel session — ≥1 active session AND `config.parallel.worktree.enabled`)**:
+**3.3b. Parallel mode (≥1 active session, user accepts)**:
 
-1. Verify we're in the main directory (not inside an existing worktree):
+1. Get info from the active session:
    ```bash
-   git rev-parse --git-common-dir
-   ```
-   If `GIT_COMMON_DIR != ".git"`, we're already in a worktree — inform user and do NOT create a nested worktree.
-
-2. Create worktrees directory if it doesn't exist:
-   ```bash
-   mkdir -p {worktreeDirectory}   # default: .claude/worktrees
+   # Get active sessions and their branches
+   grep -rl "Status.*IN_PROGRESS" context/tmp/session-*.md 2>/dev/null
+   # Read branch from each active session
+   grep "Branch" context/tmp/session-XXX.md
    ```
 
-3. Determine branch name: `{branchPrefix}{$ARGUMENTS}` (kebab-case)
+2. Inform user and ask:
+   > "Active session detected: **session-XXX** ({name}) on branch `{branch}`.
+   > Work in parallel on a shared branch?"
 
-4. Create worktree with new branch from `{baseBranch}`:
+3. If user accepts — **rename branch to reflect both features**:
+
+   a. Determine combined name:
+      - Existing feature: `{feature-A}` (from current branch or active session)
+      - New feature: `{feature-B}` (from `$ARGUMENTS`)
+      - Combined: `{branchPrefix}{feature-A}--{feature-B}`
+
+   b. **If active session is on a feature branch** (common case):
+      ```bash
+      # Rename existing branch to combined name
+      git branch -m {branchPrefix}{feature-A}--{feature-B}
+      ```
+      > **IMPORTANT**: Renaming a branch affects BOTH terminals (shared directory).
+      > User MUST inform Terminal 1 that the branch was renamed.
+
+   c. **If on `{baseBranch}`** (previous session worked directly on base):
+      ```bash
+      # Create shared branch from base
+      git checkout -b {branchPrefix}{feature-A}--{feature-B}
+      ```
+
+4. Create coordination directory:
    ```bash
-   git worktree add {worktreeDirectory}/{branch-name} -b {branch-name} {baseBranch}
+   mkdir -p {sharedBranchDirectory}   # default: context/.parallel
    ```
 
-5. Symlink `node_modules` to avoid redundant `npm install` (if `config.parallel.worktree.symlinkNodeModules`):
-   ```bash
-   # Detect which directories have node_modules and symlink each
-   # Example for monorepo:
-   ln -s $(pwd)/node_modules {worktreeDirectory}/{branch-name}/node_modules
-   # For monorepo with backend/frontend:
-   ln -s $(pwd)/backend/node_modules {worktreeDirectory}/{branch-name}/backend/node_modules
-   ln -s $(pwd)/frontend/node_modules {worktreeDirectory}/{branch-name}/frontend/node_modules
+5. Register **BOTH** sessions in `state.json`:
+   ```json
+   {
+     "branch": "{branchPrefix}{feature-A}--{feature-B}",
+     "sessions": {
+       "session-XXX": {
+         "feature": "{existing-session-feature-name}",
+         "domain": ["{directory-existing-session-touches}"],
+         "status": "active",
+         "start": "{date-read-from-session-XXX.md, ISO format}"
+       },
+       "session-YYY": {
+         "feature": "{new-feature-name}",
+         "domain": ["{directory-new-session-touches}"],
+         "status": "active",
+         "start": "{current-date-ISO}"
+       }
+     }
+   }
+   ```
+   - Existing session is registered by reading its `session-XXX.md` (name, feature, estimated domain by objective)
+   - If `state.json` already exists (2+ sessions), only add the new one to the `sessions` object
+   - **NOTE**: `state.json` is gitignored (lives in `{sharedBranchDirectory}`), NOT committed
+
+6. Write initial message in `channel.md`:
+   ```markdown
+   ### [HH:MM] session-YYY → all
+   Parallel mode activated. Branch renamed to `{branchPrefix}{A}--{B}`.
+   My domain: {directory}. Commits with scope: `feat({scope})`.
    ```
 
-6. Inform the user:
-   > "Parallel session detected ({N} active session(s)). Created worktree at `{worktreeDirectory}/{branch-name}/`."
-   > "**Note**: Docker is NOT available from the worktree (volumes mount the main directory). Integration tests should run from the main directory."
+7. Read full `channel.md` to get context from the other session.
 
-7. Change working directory to the worktree to continue:
-   ```bash
-   cd {worktreeDirectory}/{branch-name}
-   ```
+8. Inform user:
+   > "Parallel mode activated. Branch: `{branchPrefix}{A}--{B}`."
+   > "Atomic commits: `git commit <files> -m "feat({scope}): ..."`"
+   > "Communication channel: `{sharedBranchDirectory}/channel.md`"
+   > "**Remember**: Inform Terminal 1 that the branch was renamed."
 
-> **IMPORTANT**: The session file (`context/tmp/session-{ID}.md`) is created in the worktree's context directory.
-> When the branch is merged back, the file will appear in the main directory.
+**3.3c. User declines parallel**:
+
+Create normal feature branch (as 3.3a). Warn:
+> "The other session is on branch `{branch}`. Switching branches from that terminal will affect this directory."
 
 ### 3.5. Identify Relevant Agents
 
@@ -351,9 +406,9 @@ Skip silently if Context7 is not available or stack is not configured.
 | Context directories missing | Step 0.1 handles this automatically |
 | Context lock held by another operation | Wait for lock timeout ({lockTimeoutSeconds}s) or retry |
 | Lock script not found | Skip lock (parallel protection unavailable) |
-| Already inside a worktree | Do NOT create nested worktree — inform user, work in current worktree |
-| Worktree creation fails | Fall back to main directory (warn about parallel branch conflicts) |
-| node_modules symlink fails | Run `npm install` in worktree manually |
+| state.json already exists | Read it, add new session to existing `sessions` object |
+| Branch rename fails | Fall back to creating a new feature branch (warn about parallel conflicts) |
+| Other session editing same files | Verify domain in state.json before editing, ask user if overlap |
 
 ## Expected Output
 

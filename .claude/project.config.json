@@ -63,10 +63,10 @@
     "enabled": true,
     "lockTimeoutSeconds": 60,
     "lockFile": "context/.context.lock",
-    "worktree": {
+    "sharedBranch": {
       "enabled": true,
-      "directory": ".claude/worktrees",
-      "symlinkNodeModules": true
+      "directory": "context/.parallel",
+      "atomicCommits": true
     }
   },
   "mcp": {
