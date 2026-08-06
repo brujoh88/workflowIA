@@ -200,7 +200,7 @@ flowchart TD
 │   ├── ROADMAP.md                # Module progress tracking
 │   ├── FIXES.md                  # Bug/fix registry
 │   ├── ENVIRONMENT.md            # Access, DB, API traps [NEW]
-│   ├── .pending-commits.log      # Auto-registered commits (via hook)
+│   ├── .pending-commits.log      # Auto-registered commits (local, gitignored)
 │   ├── tmp/                      # Active sessions + pre-compaction snapshot
 │   ├── verifications/            # Evidence of manual testing rounds [NEW]
 │   ├── archive/

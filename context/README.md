@@ -49,7 +49,7 @@ context/
 ├── ROADMAP.md                   # Module progress and dependencies
 ├── FIXES.md                     # Centralized bug/fix registry
 ├── ENVIRONMENT.md               # Access, DB, API traps, environment gotchas
-├── .pending-commits.log         # Log of commits (auto via hook)
+├── .pending-commits.log         # Log of commits (auto via hook, gitignored)
 ├── tmp/                         # Active session files
 │   ├── session-*.md             # Active sessions
 │   └── pre-compact-snapshot.md  # Auto state snapshot before compaction (gitignored)

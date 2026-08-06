@@ -15,7 +15,7 @@ context/
 ├── BACKLOG.md                   # Single source of pending items (<300 lines)
 ├── ROADMAP.md                   # Module progress tracking with dependencies
 ├── FIXES.md                     # Centralized bug/fix registry
-├── .pending-commits.log         # Auto-registered commits (via hook)
+├── .pending-commits.log         # Auto-registered commits (local, gitignored)
 ├── tmp/                         # Active session files + current snapshot
 │   ├── session-*.md             # Active sessions
 │   └── resumen-actual.md        # Latest context snapshot

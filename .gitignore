@@ -29,8 +29,11 @@ Thumbs.db
 # Logs
 logs/
 *.log
-!context/.pending-commits.log
 context/.context.lock
+
+# Commit log: a local buffer between post-commit and /finish, not a record.
+# Versioning it guarantees merge conflicts (every commit appends a line), and the
+# permanent record already lives in the archived sessions and COMPLETED.md.
 
 # Test coverage
 coverage/

@@ -58,6 +58,10 @@ Adapted from the battle-tested harness of a downstream project (200+ sessions).
   `/setup` forces it to `false` on derived projects.
 - **Context engineering**: this changelog moved out of `CLAUDE.md`.
 - **Config**: new `docker` section (`enabled`, `dbContainer`) and `memory.engram` section.
+- **`context/.pending-commits.log` is no longer versioned.** It is a local buffer between the
+  `post-commit` hook and `/finish`, not a record — versioning an append-only file guarantees a
+  merge conflict on every branch merge, and worse under parallel sessions. The permanent record
+  already lives in the archived sessions and `archive/COMPLETED.md`.
 
 ### v2.4 — 2026-03-20
 Replace Git Worktree with Shared Branch for parallel sessions: combined feature branch

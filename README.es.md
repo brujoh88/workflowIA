@@ -200,7 +200,7 @@ flowchart TD
 │   ├── ROADMAP.md                # Seguimiento de progreso por módulo
 │   ├── FIXES.md                  # Registro de bugs/fixes
 │   ├── ENVIRONMENT.md            # Accesos, BD, trampas de la API [NUEVO]
-│   ├── .pending-commits.log      # Commits auto-registrados (vía hook)
+│   ├── .pending-commits.log      # Commits auto-registrados (local, gitignored)
 │   ├── tmp/                      # Sesiones activas + foto pre-compactación
 │   ├── verifications/            # Evidencia de rondas de prueba manual [NUEVO]
 │   ├── archive/
