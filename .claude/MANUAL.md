@@ -170,10 +170,26 @@ Batch fix:
 
 Modules: A=Types, B=Security, C=Validation, D=FileSize, E=Coverage, F=APIDocs, G=Architecture, H=Quality
 
+Each run compares against the previous report in `context/auditorias/` and tags every finding
+**NEW / PERSISTS** (with the date it was first seen) **/ RESOLVED** — so you can see what moved
+instead of re-reading the same list. Findings are then routed: security defects and behaviour
+bugs to `FIXES.md` with severity, tech debt to `BACKLOG.md`, anything urgent to `ROUTE.md`.
+What is already tracked is not written twice.
+
+Module E needs `commands.coverage` configured to report real coverage. Without it, it reports how
+many business files have a test file — labelled as exactly that, never as a percentage — and the
+module status is SKIP. An unmeasured threshold is not a met threshold.
+
 ### Code Review Only
 ```
 /review-code        # Structured multi-category review with quality skill integration
 ```
+
+It reviews **everything the branch changed** (diff against the base branch's common ancestor),
+not a fixed number of commits. Before handing down the verdict it routes every finding: critical
+and small gets fixed on the spot, behaviour defects go to `FIXES.md`, tech debt to `BACKLOG.md`,
+anything urgent to `ROUTE.md`. A declined suggestion is recorded as declined. Nothing is left
+living in the report alone — that is what makes a CONDITIONAL verdict mean "tracked".
 
 ### Quick Context Check
 ```

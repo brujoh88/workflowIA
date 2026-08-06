@@ -62,6 +62,9 @@ Ask which package manager the project uses:
 
 Ask for main commands (offer defaults based on package manager):
 - Test command (default: `{pm} test`)
+- **Coverage command** (e.g. `{pm} test -- --coverage`): leave empty if there is none.
+  Without it `/audit` cannot measure coverage and reports SKIP instead of a number — it will
+  never invent a percentage from counting test files.
 - Lint command (default: `{pm} run lint`)
 - Dev server command (default: `{pm} run dev`)
 - Build command (default: `{pm} run build`)

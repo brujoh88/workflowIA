@@ -298,7 +298,7 @@ Toda la configuración se guarda en `.claude/project.config.json`:
   "project": { "name": "mi-proyecto", "description": "...", "stack": "..." },
   "language": { "code": "en", "chat": "es" },
   "commands": {
-    "packageManager": "npm", "test": "npm test", "lint": "npm run lint",
+    "packageManager": "npm", "test": "npm test", "coverage": "", "lint": "npm run lint",
     "dev": "npm run dev", "build": "npm run build", "syncTypes": ""
   },
   "git": {

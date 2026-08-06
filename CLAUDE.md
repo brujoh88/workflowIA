@@ -70,8 +70,11 @@ Read these documents based on task type:
 
 ### R5. Testing Coverage
 - Target: `workflow.coverageThreshold`% (default: 80)
-- **MANDATORY**: Run coverage BEFORE and AFTER writing tests
+- **MANDATORY**: Run coverage BEFORE and AFTER writing tests, using `commands.coverage`
 - Tests must exercise real code — if coverage doesn't increase, tests don't add value
+- **Never report a coverage number that was not measured.** Counting files that have a test file
+  next to them is not coverage — an empty test file passes that check and covers nothing. If
+  `commands.coverage` is not configured, say coverage was not measured. Unmeasured is not met.
 
 ### R6. No Assumptions — Verify First
 - Before creating any file: `Glob` + `Grep` to check it doesn't already exist

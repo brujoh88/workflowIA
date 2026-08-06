@@ -17,11 +17,39 @@ Run a comprehensive system audit. Can run all modules or a specific one.
 ## Step 0: Load Configuration
 
 Read `.claude/project.config.json`:
-- `{maxFileLines}` = `config.workflow.maxFileLines` (default: 400)
 - `{maxFunctionLines}` = `config.workflow.maxFunctionLines` (default: 50)
 - `{testCmd}` = `config.commands.test`
+- `{coverageCmd}` = `config.commands.coverage` (empty if not configured)
 - `{stack}` = `config.project.stack`
 - `{coverageThreshold}` = `config.workflow.coverageThreshold` (default: 80)
+- `{testMaxWorkers}` = `config.workflow.testMaxWorkers` (default: 2)
+- `{dockerEnabled}` = `config.docker.enabled` · `{dbContainer}` = `config.docker.dbContainer`
+
+**File size limits** — `config.workflow.maxFileLines` is an **object keyed by file type**, not a
+number: `default` (400), `services` (500), `components` (300), `hooks` (150). Read each key and
+apply the one matching the file. If it is a plain number (older config), use it for every type.
+
+## Step 0.5: Read the Previous Audit
+
+Find the most recent report in `context/auditorias/`:
+```
+Glob: context/auditorias/*.md
+```
+
+If one exists for the same scope, read it and keep its findings in hand. **Every finding in this
+run gets classified against it** — otherwise the fifth audit repeats the first one's forty
+findings and nobody can tell what moved:
+
+| Class | Meaning |
+|-------|---------|
+| **NEW** | Not in the previous report |
+| **PERSISTS** | Also in the previous report — carry the date it was **first** seen |
+| **RESOLVED** | In the previous report, gone now |
+
+Match findings by `file:line` plus the nature of the issue, not by exact text — a line number
+shifts when code above it changes. When unsure, classify as PERSISTS and say the match was fuzzy.
+
+If there is no previous report, say so: everything is NEW by definition, and that is the baseline.
 
 Detect project characteristics:
 - TypeScript? → check for `tsconfig.json`
@@ -36,12 +64,20 @@ Detect project characteristics:
 
 **Goal**: Zero type errors.
 
+Count over the **full** output, then show a sample. Truncating first and counting after reports
+a fraction of the real number:
+
 ```bash
-npx tsc --noEmit 2>&1 | head -50
+npx tsc --noEmit 2>&1 > /tmp/audit-tsc.txt
+wc -l < /tmp/audit-tsc.txt                                    # total lines
+grep -cE "error TS[0-9]+" /tmp/audit-tsc.txt                  # real error count
+grep -oE "error TS[0-9]+" /tmp/audit-tsc.txt | sort | uniq -c | sort -rn | head -10
+grep -oE "^[^(]+" /tmp/audit-tsc.txt | sort | uniq -c | sort -rn | head -5   # worst files
 ```
 
-- Count errors by category
-- Report top 5 most problematic files
+- Report the **total** error count, the top error codes, and the 5 worst files — all derived from
+  the complete output
+- Show the first 15 errors verbatim as a sample, labelled as a sample
 - If clean: report "No type errors found"
 
 ### Module B: Authorization & Security
@@ -91,30 +127,52 @@ npx tsc --noEmit 2>&1 | head -50
    ```
 
 2. For each file:
-   - Count total lines → flag if > `{maxFileLines}`
+   - Pick its limit by type: `*.service.*` → services · `*.tsx` / `*.component.*` → components ·
+     `hooks/` or `use[A-Z]*` → hooks · everything else → default
+   - Count total lines → flag if over **that** limit (say which limit applied)
    - Count function/method lines → flag if > `{maxFunctionLines}`
 
 3. Report oversized files and functions with line counts and suggested split points.
 
 ### Module E: Test Coverage
 
-**Goal**: Business logic files have corresponding test files.
+**Goal**: Know how much of the business logic is actually exercised.
+
+Two different measurements. **Never call the second one "coverage"** — a test file that exists
+and asserts nothing counts as present but covers zero, and reporting that as a percentage against
+`{coverageThreshold}` is a number that lies (R5 requires real coverage).
+
+**E.1 — Real coverage (when `{coverageCmd}` is configured)**
+
+```bash
+{coverageCmd}    # add --maxWorkers={testMaxWorkers} per R19 if the runner supports it
+```
+
+Report the tool's own numbers: statements / branches / functions / lines. Compare against
+`{coverageThreshold}`. List the least-covered business files with their real percentages.
+
+If the command fails, say why (missing dependency, needs Docker per `{dockerEnabled}`, tests
+failing) and fall through to E.2 — clearly labelled as a fallback, not as coverage.
+
+**E.2 — Test file presence (always, and it is NOT coverage)**
 
 1. Find business logic files:
    ```
    Glob: src/services/**/*.*, src/domain/**/*.*, src/use-cases/**/*.*
    ```
 
-2. For each business file, check for corresponding test:
+2. For each, look for a matching test file:
    ```
    Glob: tests/**/*{filename}*, src/**/*{filename}.test.*, src/**/*{filename}.spec.*
    ```
 
-3. Report:
-   - Files WITH tests (count)
-   - Files WITHOUT tests (list with file paths)
-   - Coverage ratio: `{with tests}/{total}` = `{%}`
-   - Flag if below `{coverageThreshold}`%
+3. Report as **"business files with a test file: {N}/{M}"** — never as a coverage percentage.
+   List the files with none. Flag any matched test file under 10 lines: it exists but almost
+   certainly asserts nothing.
+
+**If `{coverageCmd}` is not configured**, report E.2 only and state plainly: *"Real coverage was
+not measured — no coverage command configured. Set `commands.coverage` to measure it."*
+Status is **SKIP**, not PASS. An unmeasured threshold is not a met threshold.
 
 ### Module F: API Documentation
 
@@ -191,56 +249,96 @@ Generate report in `context/auditorias/YYYY-MM-DD-{module|full}.md`:
 **Scope**: {modules run}
 **Project**: {project name}
 **Stack**: {stack}
+**Compared against**: `context/auditorias/{previous file}.md` ({date}) — or "first audit, baseline"
+
+## Movement since the last audit
+
+| | Count |
+|---|---|
+| **Resolved** since {previous date} | {N} |
+| **New** | {N} |
+| **Still open** | {N} — oldest first seen {date} |
+
+{One line naming what got fixed. If nothing moved, say that plainly — it is the finding.}
 
 ## Summary
 
-| Module | Issues | Status |
-|--------|--------|--------|
-| A. Types | {N} errors | PASS / FAIL / SKIP |
-| B. Security | {N} issues | PASS / FAIL / SKIP |
-| C. Validation | {N} missing | PASS / FAIL / SKIP |
-| D. File Size | {N} oversized | PASS / FAIL / SKIP |
-| E. Coverage | {N}% coverage | PASS / FAIL / SKIP |
-| F. API Docs | {N} undocumented | PASS / FAIL / SKIP |
-| G. Architecture | {N} violations | PASS / FAIL / SKIP |
-| H. Quality | {N} anti-patterns | PASS / FAIL / SKIP |
+| Module | Result | New | Persists | Status |
+|--------|--------|-----|----------|--------|
+| A. Types | {N} type errors (full count) | {N} | {N} | PASS / FAIL / SKIP |
+| B. Security | {N} issues | {N} | {N} | PASS / FAIL / SKIP |
+| C. Validation | {N} missing | {N} | {N} | PASS / FAIL / SKIP |
+| D. File Size | {N} over their type limit | {N} | {N} | PASS / FAIL / SKIP |
+| E. Coverage | {real %} — or "not measured" | {N} | {N} | PASS / FAIL / SKIP |
+| E. Test presence | {N}/{M} business files have a test file | {N} | {N} | — |
+| F. API Docs | {N} undocumented | {N} | {N} | PASS / FAIL / SKIP |
+| G. Architecture | {N} violations | {N} | {N} | PASS / FAIL / SKIP |
+| H. Quality | {N} anti-patterns | {N} | {N} | PASS / FAIL / SKIP |
 
 ## Details
 
 ### Module X: {Name}
-{Detailed findings per module}
+{Findings, each tagged NEW / PERSISTS since {date} / RESOLVED, with file:line}
 
 ## Recommended Actions
 
-Priority actions to address findings:
 1. **[CRITICAL]** {action}
 2. **[IMPORTANT]** {action}
 3. **[SUGGESTION]** {action}
+
+## Where the findings went
+
+| Finding | Destination |
+|---------|-------------|
+| {short title} | `FIXES.md` / `BACKLOG.md` / `ROUTE.md` QUEUE / declined by user |
 ```
 
-### BACKLOG Integration
+### Route the Findings — the report is not a destination
 
-After generating the report, ask user:
-> "Found {N} issues. Want to add any as BACKLOG items?"
+An audit that only writes a file produces a pile of paper. **Every finding the user accepts gets
+routed**, and the destination depends on what it is — the bug registry and the inventory are not
+interchangeable:
 
-If yes:
-- Add selected issues to BACKLOG "Next (Prioritized)" section
-- Format as standard BACKLOG items with audit reference
+| Finding | Destination | Why |
+|---|---|---|
+| Unprotected endpoint, injection risk, exposed secret | `context/FIXES.md` → Pending, **severity high** | A live defect, not pending work |
+| Any defect in shipped behaviour | `context/FIXES.md` → Pending | That is the bug registry |
+| Missing tests, missing docs, oversized file, anti-pattern | `context/BACKLOG.md` → Next or Ideas | Tech debt, that is the inventory |
+| Duplicated business rule (R25, module G) | `context/BACKLOG.md` as *"extract {rule} + make all consumers import it"* | It is one job, not one per copy |
+| Something that must be done before current work | `context/ROUTE.md` → QUEUE, at the agreed position | That is the queue |
+| A finding the user declines | Nowhere — but **record the decision in the report** | So the next audit does not re-litigate it |
+
+Present the proposed destination per finding and ask once. Each written item carries its
+`file:line` and a reference back to this report (`from audit {date}`).
+
+**PERSISTS findings already routed in a previous audit do not get written again** — check FIXES
+and BACKLOG before adding. Report them as *"already tracked in {file} since {date}"*. Duplicating
+them is how a backlog becomes unreadable.
 
 ## Rules
 
-- **Read-only analysis** — Never modify source code during audit
-- **Concrete evidence** — Every finding must include file:line reference
+- **Read-only analysis** — Never modify source code during audit. Writing the report and routing
+  findings to FIXES/BACKLOG/ROUTE is the only writing allowed.
+- **Concrete evidence** — Every finding must include a file:line reference
 - **Skip gracefully** — If a module doesn't apply (e.g., no TypeScript), mark as SKIP
-- **Configurable thresholds** — Use values from project.config.json
+- **SKIP is not PASS** — An unmeasured threshold is not a met threshold. Say what was not
+  measured and what would be needed to measure it.
+- **Count before truncating** — Report totals from complete output; samples are labelled samples
+- **Configurable thresholds** — Use values from project.config.json, per file type where the
+  config is per type
 - **No false positives** — Verify each finding is genuine before reporting
+- **Every finding gets a destination** — the report alone is not one
 
 ## Error Recovery
 
 | Problem | Recovery |
 |---------|----------|
 | TypeScript not installed | Skip Module A, mark as SKIP |
-| No test framework detected | Skip Module E, mark as SKIP |
+| No test framework detected | Skip Module E.1, run E.2, mark coverage as SKIP |
+| `{coverageCmd}` not configured | Run E.2 only, state coverage was not measured, mark SKIP |
+| Coverage command fails | Report the actual error, fall through to E.2 labelled as fallback |
+| Project runs in Docker (`{dockerEnabled}`) | Run test/coverage commands inside `{dbContainer}` or the app container (R18) |
 | No API endpoints found | Skip Modules B, C, F, mark as SKIP |
 | `context/auditorias/` missing | Create directory before writing report |
-| Audit report exceeds 400 lines | Split into separate module reports |
+| Previous audit report unreadable or malformed | Treat this run as a new baseline and say so — do not silently drop the comparison |
+| Audit report exceeds 400 lines | Split into separate module reports, one per module, sharing the same date prefix |

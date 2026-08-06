@@ -72,6 +72,27 @@ Adapted from the battle-tested harness of a downstream project (200+ sessions).
   that vanishes with the plan file is exactly what this step exists to prevent.
 - **Session file gained `Date` and `Plan` fields.** `Date` is what R22 greps to pick the archive
   quarter — the template did not have it, so that check had nothing to read.
+- **`/review-code` and `/audit` — eight defects found by auditing the auditors:**
+  - `/review-code` could not read the diff at all: its `allowed-tools` had no Bash, yet step 1
+    starts with `git diff`. Added `Bash(git:*)`.
+  - It diffed `HEAD~5`, a hardcoded commit count — reviewing strangers' commits on short
+    sessions, missing work on long ones, and failing outright on repos with fewer than five
+    commits. Now it diffs `{base}...HEAD` (the branch's own change set), with stated fallbacks.
+  - Both skills read `workflow.maxFileLines` as a number when it has been an object keyed by
+    file type — the same defect fixed in `pre-commit`, still live in these two.
+  - `/audit` module E reported a coverage **percentage** derived from counting test files that
+    exist. An empty test file counted as covered. It now runs a real coverage command
+    (`commands.coverage`, new in config) and reports test-file presence separately, explicitly
+    not as coverage. Unmeasured is SKIP, never PASS.
+  - `/audit` module A truncated `tsc` output to 50 lines and then counted errors, reporting a
+    fraction of the real number. It now counts over the full output and labels the sample.
+  - Findings evaporated. `/review-code` step 4 (new) routes every issue to FIXES, BACKLOG or
+    ROUTE before the verdict — which is what makes CONDITIONAL mean "tracked" and not "forgotten".
+  - `/audit` had no memory: the fifth run repeated the first run's findings with no way to see
+    what moved. New step 0.5 reads the previous report and classifies every finding NEW /
+    PERSISTS (with first-seen date) / RESOLVED, and skips re-writing what is already tracked.
+  - `/audit` routed everything to BACKLOG, including unprotected endpoints. Security defects and
+    behaviour bugs now go to FIXES with severity; tech debt goes to BACKLOG.
 - **Context engineering**: this changelog moved out of `CLAUDE.md`.
 - **Config**: new `docker` section (`enabled`, `dbContainer`) and `memory.engram` section.
 - **`context/.pending-commits.log` is no longer versioned.** It is a local buffer between the

@@ -11,6 +11,7 @@
   "commands": {
     "packageManager": "npm",
     "test": "npm test",
+    "coverage": "",
     "lint": "npm run lint",
     "dev": "npm run dev",
     "build": "npm run build",

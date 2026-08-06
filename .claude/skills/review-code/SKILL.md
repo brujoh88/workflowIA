@@ -3,7 +3,7 @@ name: review-code
 description: Review code for quality and bugs
 context: fork
 agent: Explore
-allowed-tools: Read, Grep, Glob
+allowed-tools: Read, Grep, Glob, Bash(git:*)
 ---
 
 # Code Review
@@ -13,19 +13,41 @@ allowed-tools: Read, Grep, Glob
 Read `.claude/project.config.json` for project conventions, limits, and quality settings.
 
 **Variables to load**:
-- `{maxFileLines}` = `config.workflow.maxFileLines` (default: 400)
+- `{mainBranch}` = `config.git.mainBranch` (default: `main`)
+- `{devBranch}` = `config.git.devBranch` (empty means branches come off `{mainBranch}`)
 - `{maxFunctionLines}` = `config.workflow.maxFunctionLines` (default: 50)
 - `{externalSkills}` = `config.quality.externalSkills` (default: `[]`)
 
+**File size limits** — `config.workflow.maxFileLines` is an **object keyed by file type**, not a
+number. Read each key: `default` (400), `services` (500), `components` (300), `hooks` (150).
+If it is a plain number (older config), use it for every type.
+Limits apply to **source code only** — documentation, config, data, schemas and generated files
+are exempt, same as the `pre-commit` hook.
+
 Check for active session in `context/tmp/session-*.md`:
-- If exists: read session objective for context on what the changes are about
+- If exists: read the objective, the `Plan` field, and any `## Size signals accepted` section
 - If not: review without session context
 
 ## Step 1: Identify Changes
 
-!`git diff --stat HEAD~5`
+Review **everything this branch changed**, not an arbitrary number of commits. Diff against the
+point where the branch left its base:
 
-Group changes by category:
+```bash
+BASE={devBranch:-mainBranch}
+git merge-base --is-ancestor "$BASE" HEAD 2>/dev/null \
+  && git diff --stat "$BASE"...HEAD \
+  || git diff --stat HEAD
+```
+
+The three-dot form compares against the common ancestor, so commits landing on the base branch
+meanwhile do not pollute the review.
+
+**Fallbacks, in order** — say which one was used:
+1. Already on the base branch, or it does not exist → `git diff --stat HEAD` (uncommitted work)
+2. Nothing to compare → ask the user for the scope. Never guess a commit count.
+
+Get the file list with `git diff --name-only "$BASE"...HEAD` and group by category:
 
 | Category | Files | Count |
 |----------|-------|-------|
@@ -100,7 +122,8 @@ For each changed file, apply the relevant checklists:
 - [ ] Code follows project naming conventions
 - [ ] No unnecessary code duplication
 - [ ] Functions are single-responsibility
-- [ ] File length within limits (~{maxFileLines} lines)
+- [ ] File length within the limit **for its type** (services / components / hooks / default) —
+      source code only, never documentation or config
 - [ ] Function length within limits (~{maxFunctionLines} lines)
 - [ ] Imports are clean (no unused imports)
 
@@ -198,7 +221,13 @@ symptom shows up as a UI that promises something the API refuses.
 
 - **READY**: No critical issues found. Safe to merge.
 - **PENDING**: {N} critical issues must be resolved before merge.
-- **CONDITIONAL**: No critical issues, but {N} important issues should be tracked. Can merge with follow-up plan.
+- **CONDITIONAL**: No critical issues, but {N} important issues are now tracked (see below).
+
+### Where each finding went
+
+| # | Finding | Destination |
+|---|---------|-------------|
+| 1 | {short title} | Fixed now / `FIXES.md` / `BACKLOG.md` / `ROUTE.md` QUEUE |
 
 **Quality skills invoked**: {list of skills consulted during this review cycle}
 ```
@@ -211,11 +240,37 @@ symptom shows up as a UI that promises something the API refuses.
 | **CONDITIONAL** | 0 CRITICAL issues AND >2 IMPORTANT issues |
 | **PENDING** | Any CRITICAL issue present |
 
+## Step 4: Route the Findings — nothing is left in the report only
+
+A finding that lives only in this report dies with the conversation. **Every issue gets a
+destination before the review ends.** This is the step that makes CONDITIONAL mean something:
+"can merge because the rest is tracked", not "can merge and forget".
+
+Ask once, presenting the proposed destination per finding, then write:
+
+| Finding is | Destination | Why |
+|---|---|---|
+| CRITICAL, and small | Fix now, in this session | It blocks the merge anyway |
+| CRITICAL, and large | `context/FIXES.md` → Pending, severity high | Needs its own session; the merge waits |
+| A defect in shipped behaviour | `context/FIXES.md` → Pending | That is the bug registry |
+| Missing work / tech debt | `context/BACKLOG.md` → Next or Ideas | That is the inventory |
+| Must be next, before other work | `context/ROUTE.md` → QUEUE, at the agreed position | That is the queue |
+| SUGGESTION the user declines | Nowhere — say so explicitly in the report | Declining is a valid answer, but it must be visible |
+
+Each written item carries the `file:line` and a reference back to this review
+(`from review on {branch}, {date}`). If a session is active, list the destinations in its
+Progress section so `/finish` picks them up.
+
+**Write this before showing the verdict.** A verdict handed over while the findings are still
+floating is the failure this step exists to prevent.
+
 ## Error Recovery
 
 | Problem | Recovery |
 |---------|----------|
-| No recent commits to diff | Use `git diff --stat HEAD` or ask user for scope |
+| On the base branch, or it does not exist | `git diff --stat HEAD` (uncommitted work) — say so in the report |
+| Branch has no common ancestor with base | Ask the user for the scope. Never fall back to a fixed commit count. |
 | Quality skill not installed | Note as "configured but not installed" and continue review |
 | Session not found | Review without session context — note this in report |
 | Too many files to review | Group by category, focus on CRITICAL checks first |
+| User does not want to route findings now | Record that decision in the report and, if a session is active, in its Progress section. Do not silently drop them. |
