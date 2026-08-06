@@ -5,11 +5,15 @@
 
 **[Leer en Español](README.es.md)**
 
-A battle-tested project template for AI-assisted development with Claude Code. Provides session tracking, structured workflows, 9 specialized agents, 21 enforced rules, parallel sessions support, and full development traceability out of the box. Born from 124+ real development sessions.
+A battle-tested project template for AI-assisted development with Claude Code. Provides session tracking, structured workflows, 9 specialized agents, 26 enforced rules, deterministic guardrails that run as hooks, parallel sessions support, and full development traceability out of the box. Born from 200+ real development sessions.
 
 ## Features
 
+- **Conversational Discovery** (`/discover`) - Frames a new project and derives its stack from the answers; also thinks through new features on a running project
 - **Interactive Setup Wizard** (`/setup`) - Configure your project with guided prompts
+- **Deterministic Guardrails** - Hooks that deny dangerous git and DB operations *before* they run, instead of trusting that the rule is remembered
+- **Anti Context-Rot** - State snapshot before a compaction, critical context re-injected after it
+- **ROUTE — the work queue** - One page that answers "what do I work on next?" in 30 seconds
 - **Session Tracking** - Document every development session automatically
 - **Structured Workflow** - Start and finish features with `/start` and `/finish`
 - **9 Specialized Agents** - Context provider, feature architect, test engineer, and more
@@ -17,11 +21,11 @@ A battle-tested project template for AI-assisted development with Claude Code. P
 - **System-Wide Audit** (`/audit`) - 8-module code health scan with BACKLOG integration
 - **BACKLOG + ROADMAP Tracking** - Bidirectional consistency between sessions and backlog items
 - **FIXES Registry** - Centralized bug tracking with quick/complex/batch workflows
-- **MEMORY System** - Persistent lessons learned across sessions
+- **Evidence Trail** - `verifications/` keeps what was actually tested, separate from what was decided
+- **MEMORY System** - Persistent lessons learned across sessions (optional Engram integration)
 - **Implementation Plans** - Structured plan workflow with archiving
-- **21 Enforced Rules** - Battle-tested development practices
+- **26 Enforced Rules** - Battle-tested development practices
 - **Parallel Sessions** - Shared branch support for 2+ Claude instances working simultaneously
-- **Post-Commit Hook** - Automatic commit registration with anti-loop protection
 - **Context7 Integration** - Up-to-date library documentation during development
 - **Archive Rotation** - Smart cleanup keeping recent sessions, compressing old ones
 - **Quality Skills** - Configurable external quality checks for frontend and more
@@ -37,8 +41,6 @@ A battle-tested project template for AI-assisted development with Claude Code. P
 # Clone the repository
 git clone https://github.com/brujoh88/workflowIA.git my-project
 cd my-project
-
-# Or use GitHub's "Use this template" button
 ```
 
 ### 2. Initialize Git (if new project)
@@ -47,9 +49,21 @@ cd my-project
 git init
 ```
 
-### 3. Run Setup Wizard
+### 3. Frame the Project
 
 Open Claude Code and run:
+
+```
+/discover
+```
+
+A conversation about the **business**, not the technology: what breaks today, who touches it,
+what can never happen, which edges change the design, and how small the first useful version is.
+The stack comes out **derived from those answers**, with its reasoning and the ruled-out
+alternatives stated. It writes the business context, an ADR, the ROADMAP, the BACKLOG and the
+first ROUTE item — no code, no installs.
+
+### 4. Run Setup Wizard
 
 ```
 /setup
@@ -58,21 +72,23 @@ Open Claude Code and run:
 This will:
 - Collect project metadata, stack, and preferences
 - Configure commands, git conventions, and quality thresholds
-- Install the post-commit hook for automatic commit tracking
+- Install git hooks (pre-commit, commit-msg, post-commit) and register the Claude Code hooks
+- Turn off `git.allowCommitsOnMain` so the protected branch is actually protected
 - Create MEMORY.md for persistent lessons
-- Set up implementation plans directory
 - Create folder structure
 - Suggest relevant MCP servers (including Context7)
 
-### 4. Start Developing
+### 5. Start Developing
 
 ```
-/start my-feature    # Module framing + branch + session + Context7 + quality skills
+/start                # Takes the item sitting in ROUTE.md → NOW
 ... your work ...
-/review-code         # Multi-category audit with quality skill integration
-/audit               # System-wide health scan (8 modules)
-/finish              # Quality check + tests + compact summary + BACKLOG cleanup + rotation
+/review-code          # Multi-category audit with quality skill integration
+/finish               # Tests + commit + ROUTE/BACKLOG update + archive + rotation
 ```
+
+New feature idea while the project is running? Run `/discover` again — mode B sizes it, checks
+whether it duplicates an existing rule, and places it in the queue.
 
 ---
 
@@ -80,23 +96,30 @@ This will:
 
 ```mermaid
 flowchart TD
-    A[New Project] --> B["`/setup`"]
+    A[New Project] --> A1["`/discover`"]
+    A1 --> A2[Frame problem, roles, invariants, edges]
+    A2 --> A3[Derive stack + write context]
+    A3 --> B["`/setup`"]
     B --> C{Project Configured}
 
-    C --> D["`/start feature-name`"]
-    D --> D0[Frame ROADMAP module]
-    D0 --> D1[Load Context + MEMORY]
+    C --> D["`/start`"]
+    D --> D0[Read ROUTE → NOW]
+    D0 --> D1[Load Context + MEMORY + ENVIRONMENT]
     D1 --> D2[Check BACKLOG + ROADMAP + FIXES]
-    D2 --> D3[Verify no duplicates]
-    D3 --> D4{Active sessions?}
+    D2 --> D4{Active sessions?}
     D4 -->|0| E1[Create feature branch]
     D4 -->|≥1| E2{Work in parallel?}
     E2 -->|Yes| E3[Rename to shared branch A--B]
     E2 -->|No| E1
     E3 --> F
     E1 --> F[Suggest agents + quality skills]
-    F --> G[Creates session + Context7]
+    F --> G[Create session + Context7]
     G --> H[Development Work]
+
+    H --> GH{Guardrails}
+    GH -->|commit/push on main| GX[DENIED before running]
+    GH -->|destructive DB op| GX
+    GX --> H
 
     H --> I{Need review?}
     I -->|Yes| I2["`/review-code`"]
@@ -117,12 +140,13 @@ flowchart TD
     M3 -->|No| N
     M4 --> N
     M2 --> N[Mark BACKLOG + cleanup]
-    N --> O[Update ROADMAP + propagate deps]
+    N --> NR[ROUTE: item → DONE, promote next, queue findings]
+    NR --> O[Update ROADMAP + propagate deps]
     O --> P[Archive session + plan]
     P --> Q[Smart rotation]
-    Q --> QS[Suggest next session]
-    QS --> R{More features?}
-    R -->|Yes| D
+    Q --> R{More features?}
+    R -->|New idea| A1
+    R -->|Next in queue| D
     R -->|No| S[Done!]
 ```
 
@@ -134,21 +158,22 @@ flowchart TD
 .
 ├── .claude/
 │   ├── project.config.json       # All project settings
-│   ├── settings.json             # Claude Code plugin settings
+│   ├── settings.json             # Plugin settings + Claude Code hooks registration
 │   ├── settings.local.json       # Permissions (gitignored)
 │   ├── MANUAL.md                 # User guide for the framework
 │   ├── MEMORY.md                 # Persistent lessons learned
 │   ├── plan/                     # Implementation plans (gitignored)
 │   │   └── completados/          # Archived plans
 │   ├── skills/
-│   │   ├── setup/                # Setup wizard (v2)
-│   │   ├── start/                # Start feature (module framing + Context7)
-│   │   ├── finish/               # Finish feature (quality check + smart rotation)
+│   │   ├── discover/             # Product framing + feature discovery [NEW]
+│   │   ├── setup/                # Setup wizard
+│   │   ├── start/                # Start feature (reads ROUTE → NOW)
+│   │   ├── finish/               # Finish feature (updates ROUTE, rotation)
 │   │   ├── review-code/          # Code audit (frontend/E2E + quality skills)
-│   │   ├── audit/                # System-wide audit (8 modules) [NEW]
+│   │   ├── audit/                # System-wide audit (8 modules)
 │   │   ├── architecture-ref/     # Architecture patterns (auto-loaded)
-│   │   ├── development-protocol-ref/ # Dev protocol reference [NEW]
-│   │   ├── ui-design-system-ref/ # UI design reference [NEW]
+│   │   ├── development-protocol-ref/ # Dev protocol reference
+│   │   ├── ui-design-system-ref/ # UI design reference
 │   │   ├── explore-code/         # Code exploration
 │   │   ├── fix-issue/            # Bug fix workflow
 │   │   ├── deploy/               # Deployment workflow
@@ -169,27 +194,68 @@ flowchart TD
 │       ├── database.md
 │       └── frontend.md
 ├── context/
+│   ├── ROUTE.md                  # THE work queue: NOW / QUEUE / DONE [NEW]
 │   ├── README.md                 # Session index + rotation rules
-│   ├── BACKLOG.md                # Task backlog (<300 lines target)
+│   ├── BACKLOG.md                # Full pending inventory (<300 lines target)
 │   ├── ROADMAP.md                # Module progress tracking
-│   ├── FIXES.md                  # Bug/fix registry [NEW]
+│   ├── FIXES.md                  # Bug/fix registry
+│   ├── ENVIRONMENT.md            # Access, DB, API traps [NEW]
 │   ├── .pending-commits.log      # Auto-registered commits (via hook)
-│   ├── tmp/                      # Active sessions + current snapshot
+│   ├── tmp/                      # Active sessions + pre-compaction snapshot
+│   ├── verifications/            # Evidence of manual testing rounds [NEW]
 │   ├── archive/
 │   │   ├── COMPLETED.md          # History of completed items
 │   │   └── YYYY-QN/
-│   │       ├── sessions/         # Archived session files
+│   │       ├── sessions/         # Archived sessions (quarter from SESSION date)
 │   │       └── SUMMARY.md        # Quarterly summary
-│   ├── auditorias/               # Audit reports [NEW]
+│   ├── auditorias/               # Audit reports
 │   └── consolidated/             # Per-feature documentation
 ├── scripts/
 │   ├── context-lock.sh           # Distributed lock for parallel sessions
 │   └── hooks/
-│       ├── pre-commit            # Lint, file size (R4), TypeScript errors (R16)
-│       └── post-commit           # Auto-registers commits (with anti-loop)
-├── CLAUDE.md                     # Project instructions (21 rules + routing)
+│       ├── pre-commit            # Protected branch, file size (R4), TS errors (R16)
+│       ├── commit-msg            # No AI attribution + commit format (R3) [NEW]
+│       ├── post-commit           # Auto-registers commits (with anti-loop)
+│       ├── post-merge            # Imports Engram memories after pull [NEW]
+│       ├── claude-guard-main.sh  # Denies commit/push on protected branch [NEW]
+│       ├── claude-guard-db.sh    # Denies destructive DB ops [NEW]
+│       ├── claude-precompact.sh  # State snapshot before compaction [NEW]
+│       └── claude-session-context.sh # Re-injects context after compaction [NEW]
+├── CLAUDE.md                     # Project instructions (26 rules + routing)
+├── CLAUDE-CHANGELOG.md           # Framework history (kept out of context) [NEW]
 └── CLAUDE.local.md               # Local config (gitignored)
 ```
+
+## Three files, three questions
+
+| Question | File |
+|----------|------|
+| **What do I work on next?** | `context/ROUTE.md` → NOW. One item, one page. |
+| **What is still pending overall?** | `context/BACKLOG.md` — the full inventory, unordered. |
+| **Where is the product going?** | `context/ROADMAP.md` — modules, progress, dependencies. |
+
+Keeping them separate is the point: ROUTE stays short enough to actually read at the start of
+every session, which is what makes it useful.
+
+## Guardrails
+
+Some rules used to depend on remembering them. These run on their own, before the command does.
+
+| Hook | Type | Enforces |
+|------|------|----------|
+| `claude-guard-main.sh` | PreToolUse | Denies `git commit`/`git push` on the protected branch **before** it executes |
+| `claude-guard-db.sh` | PreToolUse | Denies destructive DB operations always; denies migrations outside Docker when configured |
+| `commit-msg` | git | Blocks AI attribution + enforces conventional commit format |
+| `pre-commit` | git | Protected branch, per-type file size (source code only), TypeScript errors |
+| `claude-precompact.sh` | PreCompact | Writes a state snapshot before the conversation is summarized |
+| `claude-session-context.sh` | SessionStart | Re-injects branch, session, ROUTE item and key rules after a compaction |
+
+A PreToolUse hook exiting with code 2 denies the tool call and returns its reason as feedback.
+These are not warnings — the command does not run.
+
+> **Note**: this repository ships with `git.allowCommitsOnMain: true`, because its own main branch
+> *is* its working branch. `/setup` turns it off for derived projects. If you clone without
+> running `/setup`, the branch guard stays asleep.
 
 ## Agents
 
@@ -211,9 +277,10 @@ flowchart TD
 
 | Command | Description |
 |---------|-------------|
-| `/setup` | Interactive configuration wizard (v2: MEMORY, plans, hooks, quality) |
-| `/start <feature>` | Module framing + branch + session + Context7 + quality skills |
-| `/finish` | Quality check + tests + compact summary + BACKLOG cleanup + rotation |
+| `/discover` | Frame a new project and derive its stack, or think through a new feature |
+| `/setup` | Interactive configuration wizard (config, hooks, MEMORY, quality) |
+| `/start [feature]` | Reads ROUTE → NOW + branch + session + Context7 + quality skills |
+| `/finish` | Quality check + tests + ROUTE/BACKLOG update + archive + rotation |
 | `/review-code` | Multi-category audit + frontend/E2E + quality skill integration |
 | `/audit [module]` | System-wide audit: Types, Security, Validation, Size, Coverage, Docs, Arch, Quality |
 | `/explore-code` | Navigate and understand codebase |
@@ -236,16 +303,20 @@ All configuration is stored in `.claude/project.config.json`:
   },
   "git": {
     "branchPrefixes": { "feature": "feature/", "fix": "fix/", "hotfix": "hotfix/" },
-    "mainBranch": "main", "devBranch": "", "coAuthoredBy": false
+    "mainBranch": "main", "devBranch": "", "coAuthoredBy": false,
+    "allowCommitsOnMain": false
   },
   "conventions": { "files": "kebab-case", "commits": "conventional" },
   "workflow": {
-    "maxFileLines": 400, "maxFunctionLines": 50,
+    "maxFileLines": { "default": 400, "services": 500, "components": 300, "hooks": 150 },
+    "maxFunctionLines": 50,
     "archiveRotationThreshold": 15, "blockRotationThreshold": 3,
-    "preImplementationChecklist": true, "roadmapEnabled": true,
-    "backlogMaxLines": 300, "recentSessionsToKeep": 3, "coverageThreshold": 80
+    "backlogMaxLines": 300, "recentSessionsToKeep": 3, "coverageThreshold": 80,
+    "staleSessionThreshold": 24, "testMaxWorkers": 2
   },
   "quality": { "externalSkills": [] },
+  "docker": { "enabled": false, "dbContainer": "" },
+  "memory": { "engram": { "enabled": false, "syncOnCommit": true, "importOnMerge": true } },
   "parallel": {
     "enabled": true, "lockTimeoutSeconds": 60,
     "lockFile": "context/.context.lock",
@@ -255,14 +326,14 @@ All configuration is stored in `.claude/project.config.json`:
 }
 ```
 
-## Enforced Rules (21)
+## Enforced Rules (26)
 
 | # | Rule | Description |
 |---|------|-------------|
 | R1 | Language | Respond/code in configured language |
 | R2 | Git Flow | main protected, dev branch support |
 | R3 | Commits | Co-Authored-By configurable |
-| R4 | File Size | Enforce per-type max lines from config |
+| R4 | File Size | Per-type max lines — source code only |
 | R5 | Testing | Coverage BEFORE/AFTER, threshold target |
 | R6 | Verify First | Glob+Grep before creating |
 | R7 | BACKLOG Compaction | Stay under max lines |
@@ -280,11 +351,17 @@ All configuration is stored in `.claude/project.config.json`:
 | R19 | CPU Limiting | Test workers capped |
 | R20 | Migrations Protocol | Generate diff, review, deploy |
 | R21 | Parallel Sessions | Shared branch, atomic commits, context lock |
+| R22 | Quarter Detection | Archive by the SESSION's date, never today's |
+| R23 | Deterministic Guardrails | Hooks enforce rules before the command runs |
+| R24 | `/fast` Mode | User-only toggle; Claude suggests, never activates |
+| R25 | One Business Rule, One Home | "Is this allowed?" lives in one pure function everyone imports |
+| R26 | Engram | Optional persistent recall for decisions and root causes |
 
 ## Requirements
 
 - [Claude Code CLI](https://claude.ai/claude-code) installed
 - Git
+- `jq` (recommended — hooks read the config with it; without it they fail open)
 
 ## Contributing
 
