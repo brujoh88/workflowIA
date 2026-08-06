@@ -5,6 +5,21 @@
 
 CONFIG_FILE=".claude/project.config.json"
 
+# Guardrail: never commit directly on the protected branch (R2)
+# Skipped when git.allowCommitsOnMain is true (framework/template repos only).
+MAIN_BRANCH="main"
+ALLOW_ON_MAIN="false"
+if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
+  MAIN_BRANCH=$(jq -r '.git.mainBranch // "main"' "$CONFIG_FILE" 2>/dev/null)
+  ALLOW_ON_MAIN=$(jq -r '.git.allowCommitsOnMain // false' "$CONFIG_FILE" 2>/dev/null)
+fi
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+if [ "$ALLOW_ON_MAIN" != "true" ] && [ "$CURRENT_BRANCH" = "$MAIN_BRANCH" ]; then
+  echo "pre-commit: direct commit on '$MAIN_BRANCH' is blocked (R2)." >&2
+  echo "  '$MAIN_BRANCH' only receives merges. Switch branch first." >&2
+  exit 1
+fi
+
 # Default limits
 LINT_CMD=""
 MAX_DEFAULT=400
@@ -31,20 +46,43 @@ if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
   fi
 fi
 
-# Check 1: Lint (if configured)
+# Check 1: Lint (if configured AND actually runnable)
+# A missing lint setup must not block commits — only real lint failures do.
 if [ -n "$LINT_CMD" ]; then
   echo "pre-commit: Running lint..."
-  eval "$LINT_CMD" 2>/dev/null
-  if [ $? -ne 0 ]; then
-    echo "pre-commit: Lint failed. Fix issues or use --no-verify to bypass."
-    exit 1
+  LINT_OUT=$(eval "$LINT_CMD" 2>&1)
+  LINT_CODE=$?
+  if [ "$LINT_CODE" -ne 0 ]; then
+    # Distinguish "lint is not set up here" from "the code fails lint"
+    if [ "$LINT_CODE" -eq 127 ] || \
+       echo "$LINT_OUT" | grep -qiE "missing script|command not found|ENOENT|no such file|could not determine executable"; then
+      echo "pre-commit: lint command not available here, skipping ('$LINT_CMD')."
+    else
+      echo "$LINT_OUT"
+      echo "pre-commit: Lint failed. Fix issues or use --no-verify to bypass."
+      exit 1
+    fi
   fi
 fi
 
 # Check 2: File size per type (R4)
+# Applies to SOURCE CODE only. Documentation, config, data and generated files are exempt:
+# a long MANUAL or schema is not technical debt, and capping them just teaches people to
+# bypass the hook.
 ERRORS=0
 for file in $(git diff --cached --name-only --diff-filter=ACM); do
   if [ -f "$file" ]; then
+    # Skip non-code files
+    case "$file" in
+      *.md|*.mdx|*.txt|*.rst|*.adoc) continue ;;
+      *.json|*.jsonc|*.yml|*.yaml|*.toml|*.ini|*.env*) continue ;;
+      *.lock|*-lock.json|*.sum) continue ;;
+      *.csv|*.tsv|*.sql|*.svg|*.snap) continue ;;
+      *.prisma|*.graphql|*.proto) continue ;;
+      *.gitignore|*.gitkeep|LICENSE|*.patch|*.diff) continue ;;
+      */migrations/*|*/generated/*|*/__generated__/*|*.generated.*) continue ;;
+    esac
+
     lines=$(wc -l < "$file")
     MAX_LIMIT=$MAX_DEFAULT
 

@@ -196,9 +196,30 @@ If ROADMAP doesn't exist, skip silently.
 
 This ensures the dependency map stays accurate across BACKLOG, ROADMAP, and session files.
 
+### 6.85. Update ROUTE (the work queue)
+
+Read `context/ROUTE.md`. If it does not exist, skip silently.
+
+1. **Move the finished item out of `## NOW`** into `## DONE (last 5)`, one line:
+   `- [x] **{session number}** · {what shipped, plain language} — {TICKET-ID} ({YYYY-MM-DD})`
+   Trim DONE back to 5 entries — older ones already live in `archive/COMPLETED.md`.
+2. **Promote the first `## QUEUE` item to `## NOW`.**
+3. **Add findings discovered during the session** to the QUEUE right away, one line each, with
+   their `file:line` pointer. Do not defer them to "sort later" — that is how they get lost.
+   If a finding has evidence, write it to `context/verifications/YYYY-MM-DD-*.md` and point to it.
+4. **Re-order if what shipped changed the picture** (e.g. an item that was blocked is now free,
+   or a fix revealed a bigger problem underneath). State the reason in one line.
+5. Update the header: `**Updated**: {date} · **Next session**: {new NOW item ID}`.
+
+If the session **partially** completed its item, the item stays in NOW with the remaining scope
+rewritten — do not move it to DONE.
+
 ### 6.9. Suggest Next Session
 
-Evaluate BACKLOG + ROADMAP to suggest what to work on next:
+If `ROUTE.md` exists, the suggestion is simply the item now sitting in `## NOW` — say it in one
+line and skip the ranking below.
+
+Otherwise, evaluate BACKLOG + ROADMAP to suggest what to work on next:
 - Look at "Next (Prioritized)" items in BACKLOG
 - Check ROADMAP for unblocked modules with highest priority
 - Consider dependency chains (what unblocks the most)
@@ -348,7 +369,14 @@ Ask user if they want to merge to `{baseBranch}`:
 
 ### 9. Archive Session
 
-Move session from `context/tmp/` to `context/archive/{year}-{quarter}/sessions/`:
+Move session from `context/tmp/` to `context/archive/{year}-{quarter}/sessions/`.
+
+**R22 — derive the quarter from the SESSION's date, never from today's**:
+```bash
+grep -m1 "^\*\*Date\*\*:" context/tmp/session-{ID}.md
+# month 1-3 → Q1, 4-6 → Q2, 7-9 → Q3, 10-12 → Q4
+```
+A session started in March and closed in April files under **Q1**, not Q2.
 
 First create directory if not exists:
 ```bash
@@ -416,9 +444,12 @@ Invoke **session-tracker** agent to create the documentation commit (filter comm
 Create a separate commit for all context/documentation changes:
 ```bash
 git add context/ .claude/
+# If memory.engram.enabled is true, also stage the exported memory chunks:
+# git add .engram/
 git commit -m "docs(context): close session {ID}
 
 - Session archived to {year}-{quarter}
+- ROUTE updated (next item: {new NOW})
 - BACKLOG updated
 - COMPLETED updated
 "
@@ -431,7 +462,8 @@ git commit -m "docs(context): close session {ID}
 - [ ] Tests passed
 - [ ] Quality skills check completed
 - [ ] Commit created with descriptive message (Co-Authored-By per config)
-- [ ] Session archived with compact summary
+- [ ] Session archived with compact summary (quarter from SESSION date, R22)
+- [ ] ROUTE updated (item moved to DONE, next promoted to NOW, new findings queued)
 - [ ] BACKLOG updated (items marked [x] or [~])
 - [ ] BACKLOG cleanup done (under {backlogMaxLines} lines)
 - [ ] Bidirectional consistency verified
@@ -458,7 +490,7 @@ Confirm:
 7. BACKLOG: {N} items marked complete, {M} partial | Cleanup: {before}→{after} lines
 8. FIXES: {N} items resolved (if fix branch)
 9. Feature completeness: {X}%
-10. Next suggested: {top suggestion}
+10. ROUTE: item {ID} → DONE | next up: {new NOW item}
 11. Suggested next step: merge to `{mainBranch}` or continue development
 
 ## Error Recovery

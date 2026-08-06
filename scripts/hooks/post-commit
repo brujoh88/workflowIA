@@ -34,3 +34,14 @@ if [ "$STATUS" = "DOCUMENTED" ]; then
 else
     echo "post-commit: Commit registered [${BRANCH}]"
 fi
+
+# Engram sync: export memories to versioned chunks so they travel with the repo.
+# No-op unless memory.engram.enabled is true AND the binary is installed.
+CONFIG_FILE=".claude/project.config.json"
+if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
+    ENGRAM_ENABLED=$(jq -r '.memory.engram.enabled // false' "$CONFIG_FILE" 2>/dev/null)
+    ENGRAM_SYNC=$(jq -r '.memory.engram.syncOnCommit // true' "$CONFIG_FILE" 2>/dev/null)
+    if [ "$ENGRAM_ENABLED" = "true" ] && [ "$ENGRAM_SYNC" = "true" ] && command -v engram >/dev/null 2>&1; then
+        engram sync >/dev/null 2>&1 || true
+    fi
+fi

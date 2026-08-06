@@ -148,6 +148,22 @@ npx tsc --noEmit 2>&1 | head -50
 
 3. Report architectural violations with suggested correct locations.
 
+4. **Duplicated business rules (R25)** — the same question answered in two places:
+   - Build a list of the domain's decision points: state enums, boolean flags exposed by the API
+     (`canX`, `isBlocked`, `isComplete`), and threshold comparisons.
+   - For each, grep for every site that evaluates it. A rule duplicated by copy-paste rarely
+     shares a function name — search for the **condition**, not the identifier:
+     ```
+     Grep: the state constant(s) involved (e.g. "PENDING|APPROVED")
+     Grep: the field comparison (e.g. "\.status\s*===|\.status\s*!==")
+     Grep: the threshold or numeric literal
+     ```
+   - Flag as a violation when the same condition is evaluated in 2+ files and at least one of
+     them is not importing from the other.
+   - Report as: `{condition} answered in {file:line} and {file:line} — extract to a pure function`.
+   - Also flag: frontend files that reconstruct a backend fact (a copied list of states used to
+     decide whether something is finished or blocked).
+
 ### Module H: Quality Patterns
 
 **Goal**: No anti-patterns in production code.

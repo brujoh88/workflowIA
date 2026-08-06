@@ -1,21 +1,24 @@
 # WorkflowIA - User Manual
 
-Guide for using the workflowIA development framework (v2.2).
+Guide for using the workflowIA development framework (v2.5).
 
 ## Setup on New Machine
 
 1. **Clone the repository**
 2. **Run `/setup`** — Interactive wizard configures everything
-3. **Git hooks**: Setup configures `core.hooksPath` (installs pre-commit + post-commit hooks)
-4. **LSP**: Enable TypeScript plugin in `.claude/settings.json`
-5. **MEMORY.md**: Created during setup for persistent lessons
+3. **Git hooks**: Setup runs `git config core.hooksPath scripts/hooks` and `chmod +x scripts/hooks/*`
+   (installs pre-commit + commit-msg + post-commit)
+4. **Claude Code hooks**: Setup writes the `hooks` block into `.claude/settings.json`
+   (guard-main, guard-db, precompact, session-context). Without it the guards never fire.
+5. **LSP**: Enable TypeScript plugin in `.claude/settings.json`
+6. **MEMORY.md**: Created during setup for persistent lessons
 
 ## Configuration Architecture
 
 ```
 .claude/
 ├── project.config.json          # All project settings (single source of truth)
-├── settings.json                # Claude Code plugin settings
+├── settings.json                # Claude Code plugin settings + hooks registration (R23)
 ├── settings.local.json          # Local permissions (gitignored)
 ├── MANUAL.md                    # This file
 ├── MEMORY.md                    # Persistent lessons and preferences
@@ -27,6 +30,7 @@ Guide for using the workflowIA development framework (v2.2).
 ├── docs/                        # Framework documentation
 │   └── QUALITY-SKILLS-CONTRACT.md # Quality skill interface contract
 ├── skills/                      # Slash commands
+│   ├── discover/                # /discover - Product framing (run before /setup)
 │   ├── setup/                   # /setup - Configuration wizard
 │   ├── start/                   # /start - Begin feature
 │   ├── finish/                  # /finish - End feature
@@ -54,12 +58,27 @@ Guide for using the workflowIA development framework (v2.2).
     ├── api.md
     ├── database.md
     └── frontend.md
+
+scripts/
+├── context-lock.sh              # Serializes context writes across parallel sessions
+└── hooks/
+    ├── pre-commit               # git: protected branch, file size, TS errors
+    ├── commit-msg               # git: no AI attribution + conventional format
+    ├── post-commit              # git: registers commits in .pending-commits.log
+    ├── claude-guard-main.sh     # Claude: denies commit/push on protected branch
+    ├── claude-guard-db.sh       # Claude: denies destructive DB ops / migrations outside Docker
+    ├── claude-precompact.sh     # Claude: state snapshot before compaction
+    └── claude-session-context.sh # Claude: re-injects context after compaction
+
+CLAUDE.md                        # Rules and routing (loaded every session — keep it small)
+CLAUDE-CHANGELOG.md              # Framework history (kept out of context on purpose)
 ```
 
 ## Skills (Slash Commands)
 
 | Skill | Trigger | Description |
 |-------|---------|-------------|
+| `/discover` | New project **or** any new feature idea | Mode A frames a new project and derives its stack. **Mode B thinks through a feature on a running project** — what it solves, what it breaks, where it queues. Mode C re-frames after a pivot. |
 | `/setup` | First-time configuration | Interactive wizard: project metadata, git, hooks, MEMORY |
 | `/start <feature>` | Begin new work | Module framing + branch + session + Context7 + quality skills |
 | `/finish` | End current work | Quality check + tests + compact summary + BACKLOG cleanup + rotation |
@@ -86,6 +105,35 @@ Guide for using the workflowIA development framework (v2.2).
 | `frontend-integrator` | Component scaffolding, a11y, dark mode | Direct delegation |
 
 ## Workflows
+
+### New Project (from zero)
+```
+1. /discover                     # Conversation: the problem, roles, invariants, edges
+                                 # → stack recommendation + CLAUDE.md + ADR-001 + ROADMAP
+                                 #   + BACKLOG + first ROUTE item
+2. /setup                        # Technical config: commands, branches, hooks, limits
+3. /start                        # Takes the item sitting in ROUTE.md → NOW
+```
+
+`/discover` asks about the **business**, never about technology — the stack is derived from the
+answers and presented with its reasoning and what was ruled out. It writes documents only: no
+code, no installs.
+
+### New Feature on a Running Project
+```
+1. /discover                     # Mode B: what does it solve, what breaks, where does it queue
+                                 # → BACKLOG item + ROADMAP placement + ROUTE position
+                                 #   (+ a plan in .claude/plan/ only if it is large)
+2. /start                        # Takes it from ROUTE → NOW
+```
+
+**Run Mode B every time a feature idea shows up** — it is the cheap way to find out that the
+thing already exists, or duplicates an existing rule (R25), or should wait behind something else.
+Four short rounds: what problem and for whom, what it touches and could break, where it belongs
+in the ROADMAP, and what it displaces in the queue.
+
+It never rewrites the Business Context. If the idea turns out to be bigger than a feature, it
+stops and offers Mode C (re-framing) rather than quietly redefining the product.
 
 ### Feature Development
 ```
@@ -136,22 +184,46 @@ Ask: "What's the project status?"  # Triggers context-provider with suggested pa
 
 ```
 context/
+├── ROUTE.md                     # THE work queue — read first (NOW / QUEUE / DONE)
 ├── README.md                    # Index of active sessions and status
-├── BACKLOG.md                   # Prioritized pending items (<300 lines target)
+├── BACKLOG.md                   # Full pending inventory, unordered (<300 lines target)
 ├── ROADMAP.md                   # Module status and progress tracking
 ├── FIXES.md                     # Centralized bug/fix registry
+├── ENVIRONMENT.md               # Access, DB, API traps, environment gotchas
 ├── .pending-commits.log         # Auto-registered commits (via hook)
 ├── tmp/                         # Active session files
 │   ├── session-*.md             # Active sessions
-│   └── resumen-actual.md        # Latest context snapshot
+│   └── pre-compact-snapshot.md  # State snapshot before compaction (gitignored)
+├── verifications/               # Versioned evidence of manual testing rounds
 ├── archive/
 │   ├── COMPLETED.md             # History of completed items
 │   └── YYYY-QN/
-│       ├── sessions/            # Archived session files
+│       ├── sessions/            # Archived sessions (quarter from SESSION date, R22)
 │       └── SUMMARY.md           # One-line per session summary
 ├── auditorias/                  # Audit reports from /audit
 └── consolidated/                # Per finished feature documentation
 ```
+
+### ROUTE.md — the work queue
+
+The problem it solves: BACKLOG and ROADMAP grow until reading them at the start of a session
+costs more than the session itself. ROUTE stays one page.
+
+| Section | Holds |
+|---------|-------|
+| `NOW` | **One** item. What is being worked on right now. |
+| `QUEUE` | The rest, in order. One line each, pointing at `file:line`. |
+| `IN PARALLEL` | Small items that do not consume a session (seeds, one-liners). |
+| `DONE (last 5)` | Recent closures. Older ones live in `archive/COMPLETED.md`. |
+
+| Question | File |
+|----------|------|
+| What do I work on next? | `ROUTE.md` → NOW |
+| What is still pending overall? | `BACKLOG.md` |
+| Where is the product going? | `ROADMAP.md` |
+
+`/start` reads NOW first; `/finish` (step 6.85) moves the item to DONE, promotes the next, and
+queues anything found during the session. A finding never waits to be "sorted later".
 
 ## MEMORY.md
 
@@ -354,23 +426,71 @@ External quality skills can be integrated via `.claude/docs/QUALITY-SKILLS-CONTR
 - **Integration**: Checked by `/review-code` (Step 1.5) and `/finish` (Step 0.5)
 - **Reference**: See `.claude/docs/QUALITY-SKILLS-CONTRACT.md` for full specification
 
-## Git Hooks
+## Hooks — the deterministic layer (R23)
 
-Two hooks are installed via `git config core.hooksPath scripts/hooks`:
+Some rules used to depend on remembering them. These run on their own, before the command does.
+
+### Git hooks
+
+Installed via `git config core.hooksPath scripts/hooks` (make them executable: `chmod +x scripts/hooks/*`).
 
 | Hook | Purpose | Bypass |
 |------|---------|--------|
-| `pre-commit` | Lint, per-type file size (R4), TypeScript errors (R16) | `git commit --no-verify` |
-| `post-commit` | Auto-register commits in `.pending-commits.log` | N/A |
+| `pre-commit` | Protected branch (R2), lint, per-type file size (R4), TypeScript errors (R16) | `git commit --no-verify` |
+| `commit-msg` | Blocks AI attribution when `git.coAuthoredBy` is false (R3) + conventional commit format | `git commit --no-verify` |
+| `post-commit` | Auto-register commits in `.pending-commits.log` + Engram sync (if enabled) | N/A |
+| `post-merge` | Import Engram memories after pull/merge (if enabled) | N/A |
 
-## Enforced Rules (21 total)
+### Claude Code hooks
+
+Registered in `.claude/settings.json`. **Without that block they never fire** — `/setup` step 7
+writes it.
+
+| Hook | Event | Purpose |
+|------|-------|---------|
+| `claude-guard-main.sh` | PreToolUse (Bash) | Denies `git commit`/`git push` on the protected branch **before** it runs. Reads `git.mainBranch`. |
+| `claude-guard-db.sh` | PreToolUse (Bash) | Denies destructive DB ops always; denies migrations/seeds outside Docker when `docker.enabled` is true. Covers Prisma, TypeORM, Sequelize, Knex, Alembic, Django, Rails. |
+| `claude-precompact.sh` | PreCompact | Writes `context/tmp/pre-compact-snapshot.md` (branch, active sessions, uncommitted changes, recent commits) before the conversation is summarized. |
+| `claude-session-context.sh` | SessionStart (`compact`) | Re-injects branch, active session, recent commits, current ROUTE item and the rules most often lost after a compaction. |
+
+A PreToolUse hook exiting with code 2 denies the tool call and returns its stderr to Claude as
+feedback. These are not warnings — the command does not run.
+
+**Why both layers**: the git hooks catch the commit itself; the Claude Code hooks catch the intent
+inside the agent loop, before anything happens.
+
+## Persistent Memory (Engram) — optional
+
+Off by default (`memory.engram.enabled: false`). Enable via `/setup` step 6.7.
+
+**What it adds over `MEMORY.md`**: full-text search over past decisions, and memories that
+**travel with the repo** — they export to `.engram/chunks/` (versioned), so a clone on another
+machine gets them.
+
+| Piece | Role |
+|-------|------|
+| `mem_save` | Record a decision, a non-obvious root cause, a domain convention |
+| `mem_search` | Ask "did we already decide this?" before deciding again |
+| `mem_context` | Recover context after a compaction |
+| `post-commit` | Exports memories to `.engram/chunks/` |
+| `post-merge` | Imports memories after a pull |
+| `/finish` | Stages `.engram/` with the documentation commit |
+
+**Requires**: the `engram` binary installed per machine, plus the MCP server registered.
+Every integration point checks before running — if it is disabled or the binary is missing,
+nothing happens and nobody is blocked.
+
+**What it does not do**: replace `context/`. ROUTE, BACKLOG, ROADMAP, FIXES and the session files
+are the record of the project. Engram is recall.
+
+## Enforced Rules (26 total)
 
 | # | Rule | Summary |
 |---|------|---------|
 | R1 | Language | Respond/code in configured language |
 | R2 | Git Flow | main protected, branch from dev if configured |
 | R3 | Commits | Co-Authored-By only if configured |
-| R4 | File Size | Enforce per-type maxFileLines/maxFunctionLines |
+| R4 | File Size | Enforce per-type maxFileLines/maxFunctionLines — **source code only** |
 | R5 | Testing | Coverage BEFORE/AFTER, target threshold |
 | R6 | Verify First | Glob+Grep before creating, no assumptions |
 | R7 | BACKLOG Compaction | Stay under backlogMaxLines |
@@ -388,6 +508,11 @@ Two hooks are installed via `git config core.hooksPath scripts/hooks`:
 | R19 | CPU Limiting | Test workers capped at `testMaxWorkers` (default: 2) |
 | R20 | Migrations Protocol | Generate diff → review SQL → deploy (non-interactive) |
 | R21 | Parallel Sessions | Shared branch for 2+ sessions, context serialized via lock, atomic commits per scope |
+| R22 | Quarter Detection | Archive by the SESSION's date, never by today's |
+| R23 | Deterministic Guardrails | Hooks enforce R2/R3/R4/R16/R18 before the command runs |
+| R24 | `/fast` Mode | User-only toggle; Claude suggests, never activates |
+| R25 | One Business Rule, One Home | "Is this allowed?" lives in one pure function everyone imports |
+| R26 | Engram (optional) | Persistent recall for decisions and non-obvious root causes |
 
 ## Architecture Decision Records (ADR)
 
@@ -423,6 +548,11 @@ ADRs are preserved in session archives and consolidated feature docs.
 | state.json corrupted | Crash during parallel session setup | Delete `context/.parallel/state.json`, proceed as normal |
 | Parallel cleanup not done | `/finish` interrupted before cleanup | Delete `context/.parallel/` manually |
 | File domain conflict | Two sessions editing same files | Check `state.json` domains, coordinate via `channel.md` |
+| Guard hook never fires | `hooks` block missing from `.claude/settings.json`, or `git.allowCommitsOnMain` left at `true` after cloning the template | Re-run `/setup` (step 7 writes the block; git config sets the flag to `false`) |
+| Guard hook blocks a legitimate command | Pattern matched too broadly (e.g. the word `main` in a path) | Run it yourself in the terminal — the guards only gate Claude's Bash calls |
+| `commit-msg` rejects a valid message | Subject is not conventional format | Use `type(scope): description`, or set `conventions.commits` to something else |
+| Hooks do nothing after clone | Not executable / hooksPath unset | `chmod +x scripts/hooks/*` and `git config core.hooksPath scripts/hooks` |
+| ROUTE.md out of sync with reality | `/finish` interrupted before step 6.85 | Move the item to DONE and promote the next one manually |
 
 ## Tips
 
@@ -441,6 +571,7 @@ ADRs are preserved in session archives and consolidated feature docs.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.5 | 2026-08-06 | Deterministic guardrails (guard-main, guard-db, commit-msg), anti context-rot hooks (PreCompact + SessionStart), `context/ROUTE.md` work queue, `ENVIRONMENT.md`, `verifications/`, R22/R23/R24, changelog moved to `CLAUDE-CHANGELOG.md` |
 | v2.4 | 2026-03-20 | Replace Git Worktree with Shared Branch for parallel sessions: combined feature branch, state.json + channel.md coordination, atomic commits per scope, simplified context-lock.sh |
 | v2.3 | 2026-03-13 | Git Worktree for parallel sessions: worktree creation/cleanup in /start and /finish, worktree-aware lock, config, limitations, troubleshooting |
 | v2.2 | 2026-03-13 | 10 improvements from 127+ sessions: parallel sessions, per-type file limits, enhanced hooks, Docker/CPU/migrations rules, cross-section consistency, enhanced rotation |

@@ -43,27 +43,44 @@ Tracking system to document development sessions.
 
 ```
 context/
+├── ROUTE.md                     # THE work queue — read this first (NOW / QUEUE / DONE)
 ├── README.md                    # This file (index)
-├── BACKLOG.md                   # Single source of pending items (<300 lines target)
+├── BACKLOG.md                   # Unordered inventory of pending items (<300 lines target)
 ├── ROADMAP.md                   # Module progress and dependencies
 ├── FIXES.md                     # Centralized bug/fix registry
+├── ENVIRONMENT.md               # Access, DB, API traps, environment gotchas
 ├── .pending-commits.log         # Log of commits (auto via hook)
 ├── tmp/                         # Active session files
 │   ├── session-*.md             # Active sessions
-│   └── resumen-actual.md        # Latest context snapshot
+│   └── pre-compact-snapshot.md  # Auto state snapshot before compaction (gitignored)
+├── verifications/               # Versioned evidence of manual testing rounds
 ├── archive/
 │   ├── COMPLETED.md             # History of completed items
 │   └── YYYY-QN/
-│       ├── sessions/            # Archived session files
+│       ├── sessions/            # Archived session files (quarter from SESSION date, R22)
 │       └── SUMMARY.md           # One line per session
 ├── auditorias/                  # Audit reports from /audit
 └── consolidated/                # Per finished feature documentation
 ```
 
+## Three files, three questions
+
+| Question | File |
+|----------|------|
+| **What do I work on next?** | `ROUTE.md` → section NOW. One item, one page, 30 seconds. |
+| **What is still pending overall?** | `BACKLOG.md` — the full inventory, unordered. |
+| **Where is the product going?** | `ROADMAP.md` — modules, progress, dependencies. |
+
+Keeping them separate is the point: ROUTE stays short enough to actually read at the start of
+every session, which is what makes it useful.
+
 ## References
 
-- `BACKLOG.md` - Prioritized pending list (<300 lines target)
+- `ROUTE.md` - The work queue (single source of "what's next")
+- `BACKLOG.md` - Full pending inventory (<300 lines target)
 - `ROADMAP.md` - Module status and progress tracking
 - `FIXES.md` - Centralized bug/fix registry
+- `ENVIRONMENT.md` - Operational data needed to work (access, DB, traps)
+- `verifications/` - Evidence behind findings
 - `archive/COMPLETED.md` - History of completed features
 - `auditorias/` - System audit reports from `/audit`

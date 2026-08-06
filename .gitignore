@@ -38,6 +38,13 @@ coverage/
 # Claude parallel sessions (coordination files)
 context/.parallel/
 
+# PreCompact snapshot (local breadcrumb, regenerated on every compaction)
+context/tmp/pre-compact-snapshot.md
+
+# Engram: local database is machine-specific; chunks/ and manifest.json ARE versioned
+.engram/*.db
+.engram/*.db-*
+
 # Claude plans (local only)
 .claude/plan/
 !.claude/plan/.gitkeep

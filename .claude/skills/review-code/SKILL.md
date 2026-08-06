@@ -104,6 +104,22 @@ For each changed file, apply the relevant checklists:
 - [ ] Function length within limits (~{maxFunctionLines} lines)
 - [ ] Imports are clean (no unused imports)
 
+### 2.6.5 Single Source for Business Rules (Priority: CRITICAL) — R25
+
+For **every business condition** this diff introduces or changes ("can X be done?", "is X
+finished?", "is X blocked?"), ask: **does something else already answer this?**
+
+- [ ] Grep the codebase for the same condition expressed differently (the state names, the field
+      comparison, the threshold — not the function name; a duplicated rule rarely shares a name)
+- [ ] If a domain function already answers it: the new code **imports** it, not reimplements it
+- [ ] If the condition now exists in 2+ places: flag as CRITICAL, propose extracting it to a pure
+      function in the domain layer, and list **every** call site that must import it
+- [ ] Frontend: no recalculating a fact the backend can expose (no copied lists of states)
+- [ ] The extracted function has its own spec
+
+This is the cheapest moment to catch it — the diff is right here. Once both copies ship, the
+symptom shows up as a UI that promises something the API refuses.
+
 ### 2.7 Frontend Audit (Conditional: if frontend files changed)
 - [ ] Data fetching patterns are consistent (hooks, server components, etc.)
 - [ ] Accessibility: semantic HTML, ARIA labels, keyboard navigation

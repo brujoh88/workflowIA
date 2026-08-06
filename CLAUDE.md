@@ -33,8 +33,11 @@ Read these documents based on task type:
 | Bug fix | Active session, `context/FIXES.md`, git log | `context/BACKLOG.md` |
 | Code review | `context/tmp/session-*.md` | `MANUAL.md` (review checklist) |
 | Architecture question | `context/ROADMAP.md` | `context/consolidated/` |
-| Context/status query | `context/README.md`, `context/BACKLOG.md` | `context/ROADMAP.md` |
+| What do I work on next? | `context/ROUTE.md` (section NOW) | `context/BACKLOG.md` |
+| Context/status query | `context/ROUTE.md`, `context/README.md` | `context/BACKLOG.md`, `context/ROADMAP.md` |
+| Environment / access / DB / API traps | `context/ENVIRONMENT.md` | `.claude/project.config.json` |
 | First interaction | `.claude/project.config.json` | `context/README.md`, `MANUAL.md` |
+| New project, nothing framed yet | `/discover` skill | then `/setup` |
 | Fix (quick) | `context/FIXES.md` | Related source files |
 | Audit | `.claude/skills/audit/SKILL.md` | `context/auditorias/` |
 | Metrics/dashboard | `/metrics` skill | `context/ROADMAP.md`, `context/BACKLOG.md` |
@@ -61,6 +64,9 @@ Read these documents based on task type:
 - Max file lines: read from `workflow.maxFileLines` (default: 400)
 - Max function lines: read from `workflow.maxFunctionLines` (default: 50)
 - If exceeded: suggest splitting before proceeding
+- **Applies to source code only.** Documentation, config, data, schemas and generated files are
+  exempt — a long MANUAL or migration is not technical debt, and capping it only teaches people
+  to bypass the hook.
 
 ### R5. Testing Coverage
 - Target: `workflow.coverageThreshold`% (default: 80)
@@ -164,6 +170,96 @@ Before modifying code to fix a bug:
 - Verify file domain in `state.json` before editing (avoid stepping on other session's files)
 - On `/finish`: last session cleans up coordination directory and optionally merges to base branch
 
+### R22. Quarter Detection for Session Archiving
+When archiving sessions on `/finish`, ALWAYS derive the quarter from the **session's own date**
+(the `Date` field inside the `.md`), NOT from today's date.
+
+| Quarter | Months | Folder |
+|---------|--------|--------|
+| Q1 | Jan, Feb, Mar | `archive/{year}-Q1/sessions/` |
+| Q2 | Apr, May, Jun | `archive/{year}-Q2/sessions/` |
+| Q3 | Jul, Aug, Sep | `archive/{year}-Q3/sessions/` |
+| Q4 | Oct, Nov, Dec | `archive/{year}-Q4/sessions/` |
+
+Mandatory check before moving a file:
+```bash
+grep -m1 "^\*\*Date\*\*:" context/tmp/session-XXX-*.md
+# month 1-3 → Q1, 4-6 → Q2, 7-9 → Q3, 10-12 → Q4
+```
+If the quarter folder does not exist, create it with its `SUMMARY.md`.
+**NEVER** file an April-June session under Q1, or a July-September one under Q2.
+
+### R23. Deterministic Guardrails
+Some rules are enforced by hooks, not by memory. They run before the command does and cannot be
+talked out of it. Do not work around them — if one fires, the rule applies.
+
+| Hook | Type | Enforces |
+|------|------|----------|
+| `claude-guard-main.sh` | PreToolUse (Bash) | R2 — no commit/push on the protected branch |
+| `claude-guard-db.sh` | PreToolUse (Bash) | R18 — no destructive DB ops, no migrations outside Docker |
+| `commit-msg` | git hook | R3 — no AI attribution + commit format |
+| `pre-commit` | git hook | R2, R4, R16 — protected branch, file size, type errors |
+| `claude-precompact.sh` | PreCompact | Snapshot of working state before context is summarized |
+| `claude-session-context.sh` | SessionStart (compact) | Re-injects branch, active session, critical rules |
+
+Registered in `.claude/settings.json` (Claude Code hooks) and via
+`git config core.hooksPath scripts/hooks` (git hooks).
+Emergency bypass for git hooks only: `git commit --no-verify`.
+
+### R24. `/fast` Mode
+`/fast` is a toggle the **user** turns on and off manually — Claude cannot activate it.
+When output speed matters, suggest it; do not attempt to enable it.
+
+### R25. One Business Rule, One Home
+**CRITICAL**: a business rule is written **once** and everyone who needs it imports it.
+
+Two questions that look alike but are not:
+
+| Question | Where it lives | Shape |
+|----------|---------------|-------|
+| **"What comes next?"** | The orchestrator — whatever decides the next step or builds the screen state | Reads state, calls the rule |
+| **"Is this allowed?"** | A **pure function** in the domain layer | No DB, no HTTP, no framework. Input → yes/no + reason |
+
+Hard rules:
+- No endpoint validates on its own what a domain function already answers. If it needs the
+  answer, it **imports the function** — it does not reimplement it.
+- The orchestrator is a consumer too, not the owner. It does not keep its own copy of the gate.
+- Two orchestrators answering **different** questions is healthy. The bug is **two places
+  answering the same one**.
+- The frontend never recalculates a fact the backend can expose. If the UI needs to know "this is
+  blocked" or "this is finished", the backend sends it as data — not as a list of states the
+  frontend copies.
+
+**Why it matters** (the defect that produced this rule): the screen showed the action button
+enabled and the POST answered 400. Two authorities answered "is this allowed?" — the orchestrator
+that built the screen, and the endpoint that validated on its own. One had drifted. The user saw
+a button that lied. Fix: extract the gate as a pure function; all three callers import it.
+
+**When you find a duplicated rule**: extract it to the domain layer as a pure function with its
+spec, and make **every** consumer import it. Fixing only the divergent copy is not enough.
+
+### R26. Engram — Persistent Memory (Optional Complement)
+Active only when `memory.engram.enabled` is true. It **complements** `context/` — it does not
+replace it.
+
+**When to save** (`mem_save`):
+- Architecture decisions and why the alternatives were rejected
+- Bugs whose root cause was not obvious (the symptom lied)
+- Reusable patterns discovered
+- Domain conventions learned from the client/business
+
+**When to search** (`mem_search`):
+- Before a design decision — check whether it was already decided
+- When a bug smells like one seen before
+- To recover context after a compaction (`mem_context`)
+
+**Does NOT replace**: sessions in `context/`, ROUTE, BACKLOG, ROADMAP, FIXES, or the
+`/start → /review-code → /finish` workflow. Those are the record; Engram is recall.
+
+**Sync**: `post-commit` exports to `.engram/chunks/` (versioned, travels with the repo),
+`post-merge` imports after a pull, and `/finish` stages `.engram/`. All no-ops when disabled or
+when the binary is missing — a teammate without Engram installed is never blocked.
+
 ## Task Delegation
 
 | Agent | Specialty | When to Use |
@@ -198,21 +294,17 @@ See `context/README.md` for:
 - Completed features history
 
 ## References
+- @context/ROUTE.md
 - @context/README.md
 - @context/BACKLOG.md
 - @context/ROADMAP.md
 - @context/FIXES.md
+- @context/ENVIRONMENT.md
 - @.claude/MANUAL.md
 - @.claude/MEMORY.md
 - @.claude/docs/QUALITY-SKILLS-CONTRACT.md
 
 ## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| v2.4 | 2026-03-20 | Replace Git Worktree with Shared Branch for parallel sessions: combined feature branch (`feature/A--B`), `state.json` + `channel.md` coordination, atomic commits per scope, simplified `context-lock.sh` |
-| v2.3 | 2026-03-13 | Git Worktree support for parallel sessions: worktree creation/cleanup in /start and /finish, worktree-aware lock script, config and documentation |
-| v2.2 | 2026-03-13 | 10 improvements from 127+ sessions: parallel sessions, per-type file limits, enhanced hooks, Docker/CPU/migrations rules, cross-section consistency, enhanced rotation |
-| v2.1 | 2026-03-12 | 9 improvements: /metrics, pre-commit hook, quality skills contract, stale detection, FIXES integration, error recovery, troubleshooting, skill rewrites |
-| v2.0 | 2026-03-12 | Backport from 124+ sessions: 17 rules, /audit skill, MEMORY, plans, FIXES, improved agents |
-| v1.0 | 2026-02-06 | Initial template from 45+ sessions |
+Lives in [CLAUDE-CHANGELOG.md](CLAUDE-CHANGELOG.md) — kept outside this file so it does not
+consume context on every session (context engineering: smallest set of high-signal tokens).

@@ -10,6 +10,19 @@ Interactive wizard to configure the workflowIA template.
 
 ## Process
 
+### 0. Check if the Project is Framed
+
+Read `CLAUDE.md`. If the `## Business Context` section still contains `[placeholder]` markers,
+the project has not been framed yet.
+
+Tell the user:
+> This configures the technical side (commands, branches, limits). What the project *is* — the
+> problem, the entities, the flows that cannot break — is not filled in yet. `/discover` covers
+> that in a conversation and writes it, including a stack recommendation derived from the answers.
+
+Ask whether to run `/discover` first (recommended) or continue with `/setup` alone.
+Either answer is fine — `/setup` works standalone.
+
 ### 1. Check Current State
 
 Read `.claude/project.config.json` to verify if already initialized.
@@ -64,6 +77,11 @@ Ask:
   - fix: `fix/`
   - hotfix: `hotfix/`
 - **Include Co-Authored-By in commits?** (default: no) — whether to attribute AI in commit messages
+
+**Always set `git.allowCommitsOnMain: false`** for a derived project — no question asked. It is
+inherited as `true` from the template repository (whose own main branch *is* its working branch)
+and must be turned off, or R2 is silently disabled. Report it in the final summary:
+`Protected branch: {mainBranch} (commits blocked)`.
 
 #### 2.6 Code Conventions
 
@@ -135,24 +153,94 @@ Fallback method:
 cp scripts/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/post-commit
 ```
 
-This installs all hooks in the `scripts/hooks/` directory:
+This installs all git hooks in the `scripts/hooks/` directory:
 - **post-commit**: auto-registers commits in `context/.pending-commits.log`
-- **pre-commit**: quality validation (lint, file size R4, TypeScript errors R16)
+- **pre-commit**: protected branch (R2), quality validation (lint, file size R4, TS errors R16)
+- **commit-msg**: blocks AI attribution (R3) + enforces commit format
+
+Make them executable:
+```bash
+chmod +x scripts/hooks/*
+```
+
+Then verify the guard hooks fire (they are registered in `.claude/settings.json`, step 7):
+```bash
+printf '{"tool_input":{"command":"git push origin %s"}}' "$(jq -r .git.mainBranch .claude/project.config.json)" \
+  | ./scripts/hooks/claude-guard-main.sh; echo "expected exit 2, got $?"
+```
 
 ### 6. Create MEMORY.md (if not exists)
 
 Check if `.claude/MEMORY.md` exists. If not, it was already created by the template.
 Confirm to user that MEMORY.md is ready for persistent lessons.
 
+### 6.5. Docker Environment
+
+Ask: **Does the project run its database in Docker?** (default: no)
+
+If yes, ask for the container name used to run DB commands (e.g. `app-backend-dev`) and save to
+`config.docker = { enabled: true, dbContainer: "..." }`.
+
+This drives `claude-guard-db.sh` (R18): with `enabled: true`, migrations and seeds attempted
+outside Docker are blocked before they run. Destructive operations are blocked either way.
+
+### 6.7. Persistent Memory (Engram) — optional
+
+Ask: **Enable Engram persistent memory?** (default: no)
+
+> Engram is an MCP server (SQLite + full-text search) for decisions and non-obvious root causes.
+> Memories export to `.engram/chunks/`, which is versioned — so they travel with the repo across
+> machines. It complements `context/` and `MEMORY.md`, it does not replace them.
+> Requires installing the `engram` binary on each machine.
+
+If yes:
+1. Set `config.memory.engram.enabled = true`
+2. Add `engram` to `config.mcp.installed`
+3. Tell the user to install the binary and register the MCP server
+
+Everything degrades to a no-op when disabled or when the binary is missing: `post-commit`,
+`post-merge` and `claude-precompact.sh` all check before running. Nobody is blocked for not
+having it installed.
+
 ### 7. Create settings.json (if not exists)
 
-Check if `.claude/settings.json` exists. If not, create with:
+Check if `.claude/settings.json` exists. If not, create it. It must register the Claude Code
+hooks (R23) — without this block the guards never fire:
 ```json
 {
   "enabledPlugins": { "typescript-lsp@claude-plugins-official": true },
-  "plansDirectory": ".claude/plan"
+  "plansDirectory": ".claude/plan",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/hooks/claude-guard-main.sh" },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/hooks/claude-guard-db.sh" }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/hooks/claude-precompact.sh" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/hooks/claude-session-context.sh" }
+        ]
+      }
+    ]
+  }
 }
 ```
+
+If it already exists but has no `hooks` key, merge the block in — do not overwrite the file.
 
 ### 7.5. Create settings.local.json template (if not exists)
 
@@ -184,6 +272,7 @@ If they don't exist, create configured folders:
 - `{structure.tests}`
 - `{structure.docs}`
 - `context/tmp/`
+- `context/verifications/`
 - `context/auditorias/`
 - `context/consolidated/`
 - `context/archive/{year}-Q{quarter}/sessions/`

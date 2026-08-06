@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "[NOMBRE]",
-    "description": "[Descripción breve de la aplicación]",
+    "description": "[Descripci\u00f3n breve de la aplicaci\u00f3n]",
     "stack": "[Backend/Frontend/DB]"
   },
   "language": {
@@ -24,7 +24,8 @@
     },
     "mainBranch": "main",
     "devBranch": "",
-    "coAuthoredBy": false
+    "coAuthoredBy": false,
+    "allowCommitsOnMain": true
   },
   "conventions": {
     "files": "kebab-case",
@@ -58,6 +59,17 @@
   },
   "quality": {
     "externalSkills": []
+  },
+  "docker": {
+    "enabled": false,
+    "dbContainer": ""
+  },
+  "memory": {
+    "engram": {
+      "enabled": false,
+      "syncOnCommit": true,
+      "importOnMerge": true
+    }
   },
   "parallel": {
     "enabled": true,

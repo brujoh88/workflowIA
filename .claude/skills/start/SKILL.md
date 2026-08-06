@@ -64,7 +64,18 @@ Read `context/ROADMAP.md` and try to auto-detect which module `$ARGUMENTS` belon
 
 ### 1.5. Context Loading
 
-Invoke **context-provider** agent in **quick mode**:
+**Read `context/ROUTE.md` FIRST.** It is the single source of "what comes next" and it is cheap
+(one page). Its `## NOW` section holds the current item.
+
+- **If `$ARGUMENTS` is empty**: take the item in `## NOW` as the session objective. If NOW is
+  empty, promote the first item from `## QUEUE` and confirm with the user.
+- **If `$ARGUMENTS` names something else**: report what NOW holds and ask whether to switch
+  (moving the NOW item back to the head of the QUEUE) or to work in parallel.
+- **If `context/ROUTE.md` does not exist**: skip silently and fall back to BACKLOG framing below.
+
+Also read `context/ENVIRONMENT.md` if it exists — access, DB and API traps needed to work.
+
+Then invoke **context-provider** agent in **quick mode**:
 - Read `context/README.md` (active sessions)
 - Read `context/BACKLOG.md` (pending items)
 - Read `context/ROADMAP.md` (if exists - module progress)
