@@ -244,10 +244,32 @@ Plans live in `.claude/plan/` with naming format `YYYY-MM-DD-description.md`.
 
 **Workflow**:
 1. Create plan → get user approval
-2. Once approved → `/start` as first step
+2. Once approved → `/start` as first step (it loads the plan as the session objective)
 3. On `/finish` → plan archived to `completados/`
 
 Plans are gitignored (local only) except for `.gitkeep` files.
+
+### Who decides a plan is needed
+
+Neither skill writes a plan and then starts coding in the same run — a plan exists to be read and
+corrected before any code.
+
+| Entry point | What it does |
+|-------------|--------------|
+| `/discover` mode B | Sizes the feature during the conversation. Writes a plan only when the answer is **large**. |
+| `/start` step 2.8 | Runs **before** the branch and session exist. Looks for an existing plan first (loads it and moves on — that is the intended path). Otherwise checks size signals. |
+
+**Size signals** in `/start`: item marked large in ROUTE · BACKLOG item with no acceptance
+criteria · touches 3+ ROADMAP modules or creates one · introduces a new business rule ("can X be
+done?", R25) · changes the data model or needs a migration · step 2.7 found related code to
+extend.
+
+If any fire, it reports **which ones** in plain language and offers three ways out: write the plan
+first (and stop), split the item into smaller ones (and stop), or continue anyway. Continuing is a
+valid answer — the signals that fired get recorded in the session file so `/review-code` and
+`/finish` know the scope was accepted as-is.
+
+If nothing fires, it says so in one line and keeps going. Small work needs no plan.
 
 ## Rotation Rules
 

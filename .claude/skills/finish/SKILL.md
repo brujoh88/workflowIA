@@ -16,7 +16,13 @@ Capture immediately:
 - **Branch**: !`git branch --show-current`
 - **Commit count**: !`git rev-list --count {mainBranch}..HEAD`
 - **Session start**: (from session file)
+- **Session date**: (the `Date` field in the session file — drives quarter archiving, R22)
 - **Duration**: calculated from session start to now
+- **Plan**: (the `Plan` field in the session file — a path, or why there is none)
+
+If the session file has a `## Size signals accepted` section, note it: the work was flagged as
+big and started without a plan. At step 7.5 (feature completeness), state plainly whether it
+actually got finished or is shipping partial — that is the question those signals were about.
 
 ### 0.1. Load Configuration
 
@@ -407,17 +413,36 @@ Add closure metadata:
 <!-- Last session: {ID} completed {date} on branch {branch} -->
 ```
 
-### 10.5. Archive Plan (if exists)
+### 10.5. Close the Plan (if there was one)
 
-Check if a plan file exists in `.claude/plan/` for this feature:
-```
-Glob: .claude/plan/*$ARGUMENTS* , .claude/plan/*.md
-```
+**Read the `Plan` field from the session file** (written by `/start` step 2.8). That is the
+authority — do not guess by filename.
 
-If found:
-- Ask user: "Found plan file {name}. Archive to `completados/`?"
-- If yes: move to `.claude/plan/completados/`
-- If no: leave in place
+| `Plan` field says | Do this |
+|---|---|
+| A path | Follow the steps below |
+| `none — no size signals` | Skip silently. There was nothing to plan. |
+| `none — signals fired, user chose to continue` | Skip archiving, but say so in the summary: this shipped without a plan, and step 7.5 already reported whether it actually got finished. |
+| Field missing (session predates this) | Fall back to `Glob: .claude/plan/*$ARGUMENTS*` and confirm the match with the user before touching anything |
+
+When there is a plan file:
+
+1. **Read it and compare against what shipped.** For each step: done, dropped, or changed?
+2. **Report the difference in one short block** — this is the most useful thing `/finish` says
+   about a planned feature:
+   ```
+   Plan: {name}
+   - Done as planned: {N} of {M} steps
+   - Changed on the way: {step} → {what was actually done, and why}
+   - Left pending: {step} → moved to BACKLOG as {item}
+   ```
+3. **Anything left pending goes to BACKLOG before archiving.** A plan step that quietly
+   disappears with the plan file is the whole failure mode this step exists to prevent.
+4. **Then ask**: "Archive `{name}` to `completados/`?"
+   - Yes → move to `.claude/plan/completados/`
+   - No → leave it (the work continues in another session)
+   - If steps are still pending and the user archives anyway, confirm those steps made it to
+     BACKLOG first.
 
 ### 11. Update Pending Commits Log
 
@@ -474,7 +499,7 @@ git commit -m "docs(context): close session {ID}
 - [ ] Feature completeness evaluated
 - [ ] Context README updated
 - [ ] Archive rotation checked (keeping {recentSessionsToKeep} recent)
-- [ ] Plan archived (if exists)
+- [ ] Plan closed: steps compared against what shipped, pending ones moved to BACKLOG, file archived
 - [ ] Pending commits log updated
 - [ ] Next session suggested
 
@@ -490,8 +515,9 @@ Confirm:
 7. BACKLOG: {N} items marked complete, {M} partial | Cleanup: {before}→{after} lines
 8. FIXES: {N} items resolved (if fix branch)
 9. Feature completeness: {X}%
-10. ROUTE: item {ID} → DONE | next up: {new NOW item}
-11. Suggested next step: merge to `{mainBranch}` or continue development
+10. Plan: {N}/{M} steps done | {K} changed | {P} moved to BACKLOG — or "none (no size signals)"
+11. ROUTE: item {ID} → DONE | next up: {new NOW item}
+12. Suggested next step: merge to `{mainBranch}` or continue development
 
 ## Error Recovery
 

@@ -150,6 +150,45 @@ Glob: src/**/*{feature-name-parts}*
 If potential matches found, report to user:
 - "Found potentially related code: {files}. Should we proceed with a new implementation or extend existing?"
 
+### 2.8. Size Check — does this need a plan first?
+
+Runs **before** the branch and session exist, so backing out costs nothing.
+
+**First, check whether a plan already exists** (R9 — an approved plan is executed *starting* with
+`/start`):
+```
+Glob: .claude/plan/*.md
+```
+If one matches this feature: load it, use its steps as the session objective, note it in the
+session file, and **skip the rest of this step**. That is the intended path, not a warning.
+
+**Otherwise, look for size signals.** Report which ones fired — never just the count:
+
+| Signal | How to check |
+|--------|--------------|
+| Item marked **large** in ROUTE | Read the item's size marker |
+| BACKLOG item has no acceptance criteria | The "Criteria" line is empty or missing |
+| Touches 3+ ROADMAP modules, or creates a new one | Result of step 0.5 + step 2.5 |
+| Introduces a new business rule ("can X be done?") | The feature description states a condition or gate |
+| Changes the data model or needs a migration | Feature description mentions entities, fields or schema |
+| Step 2.7 found existing related code to extend | Result of step 2.7 |
+
+**No signals** → say so in one line and continue to step 3. Do not ask.
+
+**One or more signals** → do not create anything yet. Report them in plain language (what would
+be hard to undo, not "3 signals detected"), then ask with `AskUserQuestion`:
+
+| Option | What happens |
+|--------|--------------|
+| **Write a plan first** (recommended when 2+ signals fired) | Draft `.claude/plan/YYYY-MM-DD-{description}.md`, present it, and **stop**. No branch, no session. The user re-runs `/start` once the plan is approved. |
+| **Split it into smaller items** | Break it into BACKLOG items with their own sizes; only the first one enters ROUTE. Then stop — the user re-runs `/start` on the first piece. |
+| **Continue without a plan** | Proceed to step 3. Record in the session file which signals fired and that the user chose to skip — so `/review-code` and `/finish` know the scope was accepted as-is. |
+
+The user's answer decides. A signal is a reason to ask once, not a blocker (R11).
+
+**Never** write the plan *and* create the session in the same run: a plan exists to be read and
+corrected before any code is written.
+
 ### 3. Create Branch and Detect Parallel Sessions
 
 **3.1. Detect active sessions**:
@@ -304,12 +343,21 @@ Create session file in `context/tmp/session-{ID}.md`:
 # Session: {ID}
 
 - **Branch**: {branchPrefix}$ARGUMENTS
+- **Date**: {YYYY-MM-DD}
 - **Start**: {date and time}
 - **Status**: IN_PROGRESS
 - **ROADMAP Module**: {module name} ({current %}%) | N/A
+- **Plan**: `.claude/plan/{file}.md` | none — no size signals | none — signals fired, user chose to continue
 
 ## Objective
 [Description based on BACKLOG or $ARGUMENTS]
+
+<!-- If size signals fired in step 2.8 and the user chose to continue without a plan,
+     list them here. /review-code and /finish read this to know the scope was accepted as-is:
+## Size signals accepted
+- {signal}: {what it means for this work}
+-->
+
 
 ## BACKLOG Items Addressed
 | Item | Status | Notes |
@@ -366,6 +414,7 @@ Present to user (informational, not blocking):
 - [ ] Feature objective is clear
 - [ ] BACKLOG item identified (or explicitly skipped)
 - [ ] No duplicate implementation detected
+- [ ] Size checked: plan loaded / not needed / skipped by choice
 - [ ] Architecture structure approved (if new feature)
 - [ ] Relevant agents identified
 - [ ] Quality skills identified (if configured)
@@ -394,10 +443,11 @@ Skip silently if Context7 is not available or stack is not configured.
 
 ## Final Verification
 
-- [ ] Context loaded (BACKLOG, ROADMAP, FIXES, active sessions)
+- [ ] Context loaded (ROUTE, BACKLOG, ROADMAP, FIXES, active sessions)
 - [ ] Module framing completed
-- [ ] Branch created and checkout done
 - [ ] Feature existence verified (no duplicates)
+- [ ] Size check done (existing plan loaded, or no signals, or user chose to continue)
+- [ ] Branch created and checkout done
 - [ ] Session created in `context/tmp/`
 - [ ] BACKLOG updated
 - [ ] Context README updated

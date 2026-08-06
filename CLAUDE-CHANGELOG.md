@@ -56,6 +56,22 @@ Adapted from the battle-tested harness of a downstream project (200+ sessions).
 - **`git.allowCommitsOnMain`** (default `false`): escape hatch for repos whose main branch *is*
   the working branch — this template itself. Honoured by `claude-guard-main.sh` and `pre-commit`.
   `/setup` forces it to `false` on derived projects.
+- **`/start` step 2.8 — size check before anything is created**: previously nothing in the flow
+  asked whether a big piece of work deserved a plan; going straight to `/start` skipped the
+  question entirely. Now it first looks for an existing plan (loads it as the session objective —
+  the R9 path), and otherwise checks six size signals (large item, no acceptance criteria, 3+
+  modules, new business rule, schema change, existing code to extend). It reports *which* signals
+  fired and offers: write the plan and stop, split the item and stop, or continue. Continuing is
+  recorded in the session file so review and finish know the scope was accepted as-is. It runs
+  before the branch and session exist, so backing out costs nothing.
+- **`/finish` step 10.5 — close the plan, do not just file it away**: it used to find the plan by
+  globbing the feature name and offer to move the file, without ever opening it. Now the session
+  file's `Plan` field is the authority (glob only as fallback for older sessions), and closing
+  means reading the plan, comparing each step against what actually shipped, reporting done /
+  changed / pending, and **moving anything pending to BACKLOG before archiving** — a plan step
+  that vanishes with the plan file is exactly what this step exists to prevent.
+- **Session file gained `Date` and `Plan` fields.** `Date` is what R22 greps to pick the archive
+  quarter — the template did not have it, so that check had nothing to read.
 - **Context engineering**: this changelog moved out of `CLAUDE.md`.
 - **Config**: new `docker` section (`enabled`, `dbContainer`) and `memory.engram` section.
 - **`context/.pending-commits.log` is no longer versioned.** It is a local buffer between the

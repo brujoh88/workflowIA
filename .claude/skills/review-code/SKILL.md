@@ -104,6 +104,19 @@ For each changed file, apply the relevant checklists:
 - [ ] Function length within limits (~{maxFunctionLines} lines)
 - [ ] Imports are clean (no unused imports)
 
+### 2.6.4 Scope Accepted Without a Plan (Conditional)
+
+If the session file has a `## Size signals accepted` section, `/start` flagged this work as big
+and the user chose to proceed without a plan. Check what that cost:
+
+- [ ] Did the change stay within the scope stated in the session objective, or did it sprawl?
+- [ ] For each signal that fired, is the thing it warned about actually handled? (e.g. "new
+      business rule" → is it a single pure function everyone imports, per 2.6.5?)
+- [ ] Is anything half-built that should be its own BACKLOG item instead of shipping partial?
+
+Report as an observation, not a violation — the user made an informed call. The point is to catch
+sprawl while it is still one diff.
+
 ### 2.6.5 Single Source for Business Rules (Priority: CRITICAL) — R25
 
 For **every business condition** this diff introduces or changes ("can X be done?", "is X

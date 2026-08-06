@@ -94,8 +94,14 @@ Read these documents based on task type:
 
 ### R9. Plans
 - Implementation plans go in `.claude/plan/YYYY-MM-DD-description.md`
-- Approved plan → `/start` as the first step
+- Approved plan → `/start` as the first step (it loads the plan as the session objective)
 - Completed plans → move to `.claude/plan/completados/`
+- **A plan is written, read and corrected BEFORE any code.** Never write a plan and create the
+  session in the same run — that defeats its purpose.
+- `/start` step 2.8 checks size before creating anything and offers a plan when the work looks
+  big (large item, no acceptance criteria, 3+ modules, new business rule, schema change).
+  It asks once; the user decides. Skipping is recorded in the session file.
+- Small work needs no plan. A plan for something that fits in one session is overhead.
 
 ### R10. Fix Workflows
 - **Quick fix** (1-2 files, clear cause): fix → test → commit directly
