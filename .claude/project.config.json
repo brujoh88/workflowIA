@@ -95,6 +95,7 @@
     "inventory": "scripts/hooks/verdad-repartida-aceptada.txt",
     "minValues": 2,
     "minValuesInTests": 2,
+    "rule": "",
     "help": []
   },
   "quality": {

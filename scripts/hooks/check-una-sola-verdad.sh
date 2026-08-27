@@ -47,6 +47,7 @@ if [ "$MODO" = "--config" ]; then
   "exclude":    ["/generated/", "/node_modules/", "/dist/", "/migrations/"],
   "inventory":  "scripts/hooks/verdad-repartida-aceptada.txt",
   "minValues": 2, "minValuesInTests": 2,
+  "rule": "R30",
   "help": ["Extraela al dominio y que todos la importen.", "Si es frontera entre apps: una casa por app + test de contrato.", "Si tiene que quedar repetida: al inventario con el porque."]
 }
 
@@ -86,6 +87,10 @@ TESTPAT=$(cfg_lista '.truth.testPattern')
 INVENTARIO=$(jq -r '.truth.inventory // "scripts/hooks/verdad-repartida-aceptada.txt"' "$CONFIG")
 MIN=$(jq -r '.truth.minValues // 2' "$CONFIG")
 MIN_TEST=$(jq -r '.truth.minValuesInTests // .truth.minValues // 2' "$CONFIG")
+# Cómo se llama esta regla en este proyecto: "R30" en uno, "regla 32" en otro. El
+# script no tiene por qué saberlo — sería, justamente, una verdad escrita dos veces.
+REGLA=$(jq -r '.truth.rule // ""' "$CONFIG")
+[ -n "$REGLA" ] && REGLA=" ($REGLA)"
 [ -z "$EXTS" ] && EXTS="ts"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -235,7 +240,7 @@ if [ "$MODO" = "--archivo" ]; then
     [ -z "${archivo:-}" ] && continue
     aceptada "$archivo" "$verdad" && continue
     if [ "$NUEVOS" -eq 0 ]; then
-      echo "Esa verdad del negocio ya tiene dueño, y no es este archivo (R30)." >&2
+      echo "Esa verdad del negocio ya tiene dueño, y no es este archivo${REGLA}." >&2
       echo "" >&2
     fi
     echo "  $archivo:$nro  [$verdad]" >&2
@@ -327,7 +332,7 @@ while IFS=$'\t' read -r archivo verdad nro texto zona; do
   if ! aceptada "$archivo" "$verdad"; then
     if [ "$ERRORES" -eq 0 ]; then
       echo "" >&2
-      echo "  ✘ Verdad del negocio escrita fuera de su casa (R30):" >&2
+      echo "  ✘ Verdad del negocio escrita fuera de su casa${REGLA}:" >&2
     fi
     echo "      $archivo:$nro  [$verdad]" >&2
     echo "        $texto" >&2
