@@ -88,6 +88,13 @@ for file in $(git diff --cached --name-only --diff-filter=ACM); do
 
     # Determine file type and apply specific limit
     case "$file" in
+      scripts/hooks/*)
+        # Git hooks are shell scripts, not React custom hooks. The 150-line limit
+        # below is meant for `useSomething.ts`; this folder only matches `*/hooks/*`
+        # by name. Left unhandled, pre-commit blocks itself the moment a hook grows
+        # past 150 lines — which is exactly what happened.
+        MAX_LIMIT=$MAX_DEFAULT
+        ;;
       *.service.ts|*.service.js)
         MAX_LIMIT=$MAX_SERVICE
         ;;
@@ -111,7 +118,19 @@ if [ "$ERRORS" -gt 0 ]; then
   exit 1
 fi
 
-# Check 3: TypeScript errors (R16, if tsc available)
+# Check 3: No business truth written in two places (R30)
+# A rule written in CLAUDE.md lasts until the first session that starts without
+# context. This one is verified, not remembered. Does nothing until the project
+# declares a "truth" block in .claude/project.config.json.
+if [ -x "scripts/hooks/check-una-sola-verdad.sh" ]; then
+  echo "pre-commit: Checking for business truth written twice..."
+  if ! ./scripts/hooks/check-una-sola-verdad.sh; then
+    echo "pre-commit: A business truth is enumerated outside its home (R30). Fix or declare it before committing."
+    exit 1
+  fi
+fi
+
+# Check 4: TypeScript errors (R16, if tsc available)
 if command -v npx >/dev/null 2>&1 && [ -f "tsconfig.json" ]; then
   echo "pre-commit: Checking TypeScript..."
   npx tsc --noEmit 2>/dev/null

@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "[NOMBRE]",
-    "description": "[Descripci\u00f3n breve de la aplicaci\u00f3n]",
+    "description": "[Descripción breve de la aplicación]",
     "stack": "[Backend/Frontend/DB]"
   },
   "language": {
@@ -57,6 +57,45 @@
     "coverageThreshold": 80,
     "staleSessionThreshold": 24,
     "testMaxWorkers": 2
+  },
+  "truth": {
+    "enabled": false,
+    "authority": [
+      {
+        "kind": "prisma",
+        "path": "prisma/schema.prisma"
+      }
+    ],
+    "homes": [
+      "src/domain/*"
+    ],
+    "scope": [
+      "src/"
+    ],
+    "testScope": [],
+    "testPattern": [
+      ".spec.",
+      ".test.",
+      "/test/",
+      "/tests/",
+      "/__tests__/"
+    ],
+    "extensions": [
+      "ts",
+      "tsx"
+    ],
+    "exclude": [
+      "/generated/",
+      "/__generated__/",
+      "/node_modules/",
+      "/dist/",
+      "/coverage/",
+      "/migrations/"
+    ],
+    "inventory": "scripts/hooks/verdad-repartida-aceptada.txt",
+    "minValues": 2,
+    "minValuesInTests": 2,
+    "help": []
   },
   "quality": {
     "externalSkills": []

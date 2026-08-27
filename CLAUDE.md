@@ -247,6 +247,16 @@ a button that lied. Fix: extract the gate as a pure function; all three callers 
 **When you find a duplicated rule**: extract it to the domain layer as a pure function with its
 spec, and make **every** consumer import it. Fixing only the divergent copy is not enough.
 
+**This rule is verified, not remembered.** Writing it down is not enough, and that is proven: in
+the project this came from, R25 was in CLAUDE.md from day one and a delivery still added the
+fourth and fifth copy of the same list — in the delivery whose whole promise was that rule.
+Nobody was careless. A rule that depends on remembering lasts until the first session that starts
+without context (R23). `scripts/hooks/check-una-sola-verdad.sh` blocks the commit when a line
+enumerates two or more values of the same business truth outside its home. It reads the values
+from the project's own authority (Prisma schema, TS union, SQL enum, Python enum), so a new value
+enters its scope on its own. It does nothing until the project declares a `truth` block in
+`.claude/project.config.json` — see `./scripts/hooks/check-una-sola-verdad.sh --config`.
+
 ### R26. Engram — Persistent Memory (Optional Complement)
 Active only when `memory.engram.enabled` is true. It **complements** `context/` — it does not
 replace it.
