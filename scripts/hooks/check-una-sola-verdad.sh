@@ -107,8 +107,21 @@ DIR_HOOK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib-verdades.sh
 . "$DIR_HOOK/lib-verdades.sh"
 
+# Si el proyecto no declaró ninguna, se busca un schema de Prisma: el candado viene
+# prendido de fábrica y tiene que arrancar sin que nadie se acuerde de configurarlo.
+autoridades() {
+  local declaradas
+  declaradas=$(jq -r '.truth.authority[]? | "\(.kind)\t\(.path)"' "$CONFIG")
+  if [ -n "$declaradas" ]; then
+    printf '%s\n' "$declaradas"
+    return 0
+  fi
+  find . -maxdepth 4 -name schema.prisma -not -path '*/node_modules/*' 2>/dev/null |
+    sed 's|^\./||' | awk 'NF { print "prisma\t" $0 }'
+}
+
 verdades() {
-  jq -r '.truth.authority[]? | "\(.kind)\t\(.path)"' "$CONFIG" | while IFS=$'\t' read -r kind patron; do
+  autoridades | while IFS=$'\t' read -r kind patron; do
     for archivo in $patron; do
       [ -f "$archivo" ] || continue
       case "$kind" in
@@ -120,6 +133,23 @@ verdades() {
       esac
     done
   done | sort -u
+}
+
+# Prendido y sin nada que leer no es pasar: es no verificar. Un candado que se cree
+# instalado y no mira nada es peor que no tenerlo.
+diagnostico() {
+  [ -n "$(verdades)" ] && return 0
+  echo "check-una-sola-verdad: está prendido y no encuentro de dónde leer las verdades." >&2
+  local decl; decl=$(jq -r '.truth.authority[]? | "  · \(.kind) → \(.path)"' "$CONFIG")
+  if [ -n "$decl" ]; then
+    echo "  Declarado en $CONFIG, pero esos archivos no existen:" >&2
+    printf '%s\n' "$decl" >&2
+  else
+    echo "  No hay truth.authority declarado y tampoco encontré un schema.prisma." >&2
+  fi
+  echo "  Arreglalo con: $0 --config     (o poné truth.enabled en false)" >&2
+  echo "  Mientras tanto NO se está verificando nada." >&2
+  return 1
 }
 
 if [ "$MODO" = "--autoridad" ]; then
@@ -278,6 +308,7 @@ fi
 #     conviene el candado, o si el proyecto ya está sano y no hace falta.
 # ─────────────────────────────────────────────────────────────────────────────
 if [ "$MODO" = "--medir" ]; then
+  diagnostico || exit 0
   TMP=$(mktemp); copias_encontradas > "$TMP"
   echo "Verdades con autoridad:  $(verdades | wc -l)"
   echo "Líneas que las repiten:  $(wc -l < "$TMP")"
@@ -326,6 +357,10 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Verificar: todo lo que no esté inventariado es un hallazgo que frena
 # ─────────────────────────────────────────────────────────────────────────────
+# No bloquea: un repo recién clonado y sin código no tiene por qué rebotar. Pero el
+# aviso sale en cada commit hasta que alguien lo configure.
+diagnostico || exit 0
+
 ERRORES=0
 while IFS=$'\t' read -r archivo verdad nro texto zona; do
   [ -z "${archivo:-}" ] && continue

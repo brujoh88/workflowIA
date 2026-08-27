@@ -254,8 +254,12 @@ Nobody was careless. A rule that depends on remembering lasts until the first se
 without context (R23). `scripts/hooks/check-una-sola-verdad.sh` blocks the commit when a line
 enumerates two or more values of the same business truth outside its home. It reads the values
 from the project's own authority (Prisma schema, TS union, SQL enum, Python enum), so a new value
-enters its scope on its own. It does nothing until the project declares a `truth` block in
-`.claude/project.config.json` — see `./scripts/hooks/check-una-sola-verdad.sh --config`.
+enters its scope on its own. It comes **on by default**: with no `truth.authority` declared it looks for a
+`schema.prisma` on its own, so a new project is covered from the first commit — which is the
+only moment when the inventory of accepted debt is still empty. If it finds nothing to read it
+says so loudly on every commit instead of passing green, because a lock that believes it is
+installed and looks at nothing is worse than no lock. Tune it (or switch it off) in the `truth`
+block of `.claude/project.config.json` — see `./scripts/hooks/check-una-sola-verdad.sh --config`.
 
 ### R26. Engram — Persistent Memory (Optional Complement)
 Active only when `memory.engram.enabled` is true. It **complements** `context/` — it does not

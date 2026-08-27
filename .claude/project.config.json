@@ -59,18 +59,19 @@
     "testMaxWorkers": 2
   },
   "truth": {
-    "enabled": false,
-    "authority": [
-      {
-        "kind": "prisma",
-        "path": "prisma/schema.prisma"
-      }
-    ],
+    "enabled": true,
+    "authority": [],
     "homes": [
-      "src/domain/*"
+      "src/domain/*",
+      "*/src/*/domain/*",
+      "*/src/domain/*"
     ],
     "scope": [
-      "src/"
+      "src",
+      "app",
+      "apps",
+      "backend",
+      "frontend"
     ],
     "testScope": [],
     "testPattern": [
