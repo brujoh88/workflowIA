@@ -130,8 +130,14 @@ fi
 copias_encontradas() {
   local incluye="" dirs="" testdirs=""
   for e in $EXTS; do incluye="$incluye --include=*.$e"; done
-  for d in $SCOPE;     do [ -d "$d" ] && dirs="$dirs $d"; done
-  for d in $TESTSCOPE; do [ -d "$d" ] && testdirs="$testdirs $d"; done
+  if [ -n "${OBJETIVO:-}" ]; then
+    # Un solo archivo: es el mismo detector, mirando menos. Lo usa el hook de
+    # sesión, que corre a cada Edit y no puede permitirse barrer el repo entero.
+    dirs="$OBJETIVO"
+  else
+    for d in $SCOPE;     do [ -d "$d" ] && dirs="$dirs $d"; done
+    for d in $TESTSCOPE; do [ -d "$d" ] && testdirs="$testdirs $d"; done
+  fi
   [ -z "$dirs$testdirs" ] && return 0
 
   local homes_re; homes_re=$(echo "$HOMES" | tr '\n' '|')
@@ -140,8 +146,8 @@ copias_encontradas() {
     case "$valores" in *"|"*) ;; *) continue ;; esac   # una verdad de un valor no se "enumera"
 
     # shellcheck disable=SC2086
-    { [ -n "$dirs" ]     && grep -rnE "['\"\`]($valores)['\"\`]" $dirs     $incluye 2>/dev/null | sed 's/$/\tsrc/'
-      [ -n "$testdirs" ] && grep -rnE "['\"\`]($valores)['\"\`]" $testdirs $incluye 2>/dev/null | sed 's/$/\ttest/'
+    { [ -n "$dirs" ]     && grep -rnHE "['\"\`]($valores)['\"\`]" $dirs     $incluye 2>/dev/null | sed 's/$/\tsrc/'
+      [ -n "$testdirs" ] && grep -rnHE "['\"\`]($valores)['\"\`]" $testdirs $incluye 2>/dev/null | sed 's/$/\ttest/'
     } | awk -F: -v verdad="$nombre" -v vals="$valores" -v homes="$homes_re" \
               -v excl="$(echo "$EXCLUDE" | tr '\n' '|')" \
               -v testpat="$(echo "$TESTPAT" | tr '\n' '|')" '
@@ -193,6 +199,69 @@ copias_encontradas() {
       '
   done
 }
+
+# Una copia ya inventariada no vuelve a avisar: está contada y tiene su porqué.
+aceptada() {
+  [ -f "$INVENTARIO" ] || return 1
+  awk -F'\t' -v archivo="$1" -v verdad="$2" '
+    !/^#/ && NF && $1 == archivo && $2 == verdad { ok = 1 }
+    END { exit(ok ? 0 : 1) }
+  ' "$INVENTARIO"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2c. Modo --archivo: un solo archivo, para avisar en el momento de escribirlo.
+#     Mismo detector que el commit — lo que cambia es cuándo se entera uno.
+# ─────────────────────────────────────────────────────────────────────────────
+if [ "$MODO" = "--archivo" ]; then
+  ARCH="${2:-}"
+  [ -n "$ARCH" ] || exit 0
+  ARCH="${ARCH#"$PWD"/}"                      # el hook manda el path absoluto
+  [ -f "$ARCH" ] || exit 0
+
+  ok=0
+  for e in $EXTS; do case "$ARCH" in *.$e) ok=1 ;; esac; done
+  [ "$ok" = 1 ] || exit 0                     # una extensión que no se mira
+
+  ok=0
+  for d in $SCOPE $TESTSCOPE; do case "$ARCH" in "$d"/*|"$d") ok=1 ;; esac; done
+  [ "$ok" = 1 ] || exit 0                     # fuera del alcance declarado
+
+  HALLAZGOS=$(OBJETIVO="$ARCH" copias_encontradas)
+  [ -n "$HALLAZGOS" ] || exit 0
+
+  NUEVOS=0
+  while IFS=$'\t' read -r archivo verdad nro texto zona; do
+    [ -z "${archivo:-}" ] && continue
+    aceptada "$archivo" "$verdad" && continue
+    if [ "$NUEVOS" -eq 0 ]; then
+      echo "Esa verdad del negocio ya tiene dueño, y no es este archivo (R30)." >&2
+      echo "" >&2
+    fi
+    echo "  $archivo:$nro  [$verdad]" >&2
+    echo "    $texto" >&2
+    NUEVOS=$((NUEVOS + 1))
+  done <<EOF
+$HALLAZGOS
+EOF
+  [ "$NUEVOS" -eq 0 ] && exit 0
+
+  echo "" >&2
+  echo "  Los valores de $(echo "$HALLAZGOS" | awk -F'\t' '{print $2}' | sort -u | tr '\n' ' ')salen de:" >&2
+  jq -r '.truth.authority[]? | "    · \(.path)"' "$CONFIG" >&2
+  echo "  La casa donde sí pueden enumerarse: $(echo "$HOMES" | tr '\n' ' ')" >&2
+  echo "" >&2
+  AYUDA=$(cfg_lista '.truth.help')
+  if [ -n "$AYUDA" ]; then
+    echo "$AYUDA" | awk '{ printf "  %d. %s\n", NR, $0 }' >&2
+  else
+    echo "  Extraela a una función pura de la casa del dominio y que todos la importen." >&2
+    echo "  Si tiene que quedar repetida, anotala en $INVENTARIO con el porqué." >&2
+  fi
+  echo "" >&2
+  echo "  Esto todavía no frena nada: el commit sí. Arreglalo ahora y no lo pagás dos veces." >&2
+  exit 1
+fi
 
 if [ "$MODO" = "--listar" ]; then
   copias_encontradas
@@ -252,14 +321,6 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Verificar: todo lo que no esté inventariado es un hallazgo que frena
 # ─────────────────────────────────────────────────────────────────────────────
-aceptada() {
-  [ -f "$INVENTARIO" ] || return 1
-  awk -F'\t' -v archivo="$1" -v verdad="$2" '
-    !/^#/ && NF && $1 == archivo && $2 == verdad { ok = 1 }
-    END { exit(ok ? 0 : 1) }
-  ' "$INVENTARIO"
-}
-
 ERRORES=0
 while IFS=$'\t' read -r archivo verdad nro texto zona; do
   [ -z "${archivo:-}" ] && continue
