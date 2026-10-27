@@ -10,6 +10,8 @@
 # Dónde va cada cosa:
 #   plantillas/git-hooks/*  -> scripts/hooks/  (+ git config core.hooksPath scripts/hooks)
 #   plantillas/gitignore    -> .gitignore      (si existe: agrega solo las líneas que faltan)
+#   .claude/settings.json   -> si existe: agrega solo las claves que faltan (lo del proyecto gana).
+#                              Instalar el plugin ya crea uno mínimo, sin la declaración de la tienda.
 #   el resto                -> misma ruta relativa en el proyecto
 #
 # Vive en bin/ del plugin (está en el PATH de Bash mientras el plugin esté activo).
@@ -24,7 +26,7 @@ SOLO_VER=false
 
 [ -d "$ORIGEN" ] || { echo "wf-plantillas: no encuentro $ORIGEN" >&2; exit 1; }
 
-copiados=(); quedaron=(); distintos=()
+copiados=(); quedaron=(); distintos=(); completados=()
 
 copiar() {  # copiar <origen> <ruta relativa en el proyecto>
   local de="$1" rel="$2" a="$DESTINO/$2"
@@ -43,6 +45,17 @@ while IFS= read -r -d '' f; do
   case "$rel" in
     git-hooks/*) copiar "$f" "scripts/hooks/${rel#git-hooks/}" ;;
     gitignore)   ;;
+    .claude/settings.json)
+      a="$DESTINO/$rel"
+      if [ -e "$a" ] && command -v jq >/dev/null 2>&1 && jq -e . "$a" >/dev/null 2>&1; then
+        junto=$(jq -s '.[0] * .[1]' "$f" "$a")
+        if [ "$junto" = "$(jq . "$a")" ]; then quedaron+=("$rel"); else
+          completados+=("$rel")
+          $SOLO_VER || printf '%s\n' "$junto" > "$a"
+        fi
+      else
+        copiar "$f" "$rel"
+      fi ;;
     *)           copiar "$f" "$rel" ;;
   esac
 done < <(find "$ORIGEN" -type f -print0 | sort -z)
@@ -68,6 +81,8 @@ $SOLO_VER && echo "wf-plantillas (--ver: no se tocó nada)"
 echo "Copiados: ${#copiados[@]}"
 [ ${#copiados[@]} -gt 0 ] && printf '  + %s\n' "${copiados[@]}"
 echo "Ya estaban iguales: ${#quedaron[@]}"
+echo "Completados con las claves que les faltaban: ${#completados[@]}"
+[ ${#completados[@]} -gt 0 ] && printf '  ~ %s\n' "${completados[@]}"
 echo "Ya existían y difieren, se dejaron como estaban: ${#distintos[@]}"
 [ ${#distintos[@]} -gt 0 ] && printf '  = %s\n' "${distintos[@]}"
 echo ".gitignore: ${#faltan[@]} línea(s) agregadas"

@@ -24,6 +24,9 @@ wf-plantillas         # copy
 project already has stays as it is, and the report lists the ones that differ from the template.
 It also copies the git hooks to `scripts/hooks/` and runs `git config core.hooksPath scripts/hooks`,
 and adds to `.gitignore` only the lines that are missing.
+`.claude/settings.json` is the one exception to "leave it as it is": installing the plugin already
+creates a minimal one without the store declaration, so `wf-plantillas` adds the keys it is missing
+(the project's own values always win) and reports it as "completed".
 
 Show the user the report. If something "differs", say so in one line per file and move on — the
 project's version wins. If `wf-plantillas` is not found, the plugin is not enabled in this session:
