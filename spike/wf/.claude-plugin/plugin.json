@@ -1,5 +1,0 @@
-{
-  "name": "wf",
-  "version": "0.2.0",
-  "description": "Spike F0 del workflowIA como plugin: un skill, un SessionStart que inyecta reglas y un PreToolUse"
-}

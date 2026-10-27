@@ -1,0 +1,8 @@
+{
+  "name": "wf",
+  "version": "3.0.0-alpha.1",
+  "description": "workflowIA: sesiones, ruta de trabajo, revisión y guardrails deterministas para desarrollar con Claude Code",
+  "author": { "name": "Gustavo Tiseira" },
+  "repository": "https://github.com/brujoh88/workflowIA",
+  "license": "MIT"
+}

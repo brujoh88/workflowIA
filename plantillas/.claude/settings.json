@@ -1,0 +1,12 @@
+{
+  "extraKnownMarketplaces": {
+    "workflowia": {
+      "source": { "source": "github", "repo": "brujoh88/workflowIA" }
+    }
+  },
+  "enabledPlugins": {
+    "wf@workflowia": true,
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "plansDirectory": ".claude/plan"
+}

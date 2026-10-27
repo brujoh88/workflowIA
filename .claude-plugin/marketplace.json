@@ -1,23 +1,12 @@
 {
   "name": "workflowia",
-  "owner": {
-    "name": "Gustavo Tiseira"
-  },
+  "owner": { "name": "Gustavo Tiseira" },
+  "description": "La tienda del workflowIA. Canal wf: la última versión. El canal wf-estable entra con la primera versión publicada (F5).",
   "plugins": [
     {
       "name": "wf",
-      "source": "./spike/wf",
-      "description": "Spike F0: plugin mínimo para probar D1–D4 antes de convertir el workflowIA en plugin"
-    },
-    {
-      "name": "wf-estable",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/brujoh88/workflowIA.git",
-        "path": "spike/wf",
-        "ref": "wf--v0.1.0"
-      },
-      "description": "Canal estable del spike: wf fijado a 0.1.0"
+      "source": "./",
+      "description": "workflowIA: sesiones, ruta de trabajo, revisión y guardrails deterministas para desarrollar con Claude Code"
     }
   ]
 }

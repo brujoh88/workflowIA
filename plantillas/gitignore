@@ -1,0 +1,54 @@
+# Config personal (NO commitear)
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build
+dist/
+build/
+.next/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+context/.context.lock
+
+# Commit log: a local buffer between post-commit and /finish, not a record.
+# Versioning it guarantees merge conflicts (every commit appends a line), and the
+# permanent record already lives in the archived sessions and COMPLETED.md.
+
+# Test coverage
+coverage/
+
+# Claude parallel sessions (coordination files)
+context/.parallel/
+
+# PreCompact snapshot (local breadcrumb, regenerated on every compaction)
+context/tmp/pre-compact-snapshot.md
+
+# Engram: local database is machine-specific; chunks/ and manifest.json ARE versioned
+.engram/*.db
+.engram/*.db-*
+
+# Claude plans (local only)
+.claude/plan/
+!.claude/plan/.gitkeep
+!.claude/plan/completados/.gitkeep

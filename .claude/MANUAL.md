@@ -1,77 +1,81 @@
 # WorkflowIA - User Manual
 
-Guide for using the workflowIA development framework (v2.5).
+Guide for using the workflowIA development framework, packaged as the Claude Code plugin `wf`
+(v3.0.0-alpha — the plugin layout landed in F1 of `.claude/plan/2026-10-27-workflow-como-plugin.md`).
 
-## Setup on New Machine
+Commands carry the plugin prefix: `/wf:start`, `/wf:finish`, `/wf:review-code`… In the sections
+below a bare `/start` means `/wf:start`.
 
-1. **Clone the repository**
-2. **Run `/setup`** — Interactive wizard configures everything
-3. **Git hooks**: Setup runs `git config core.hooksPath scripts/hooks` and `chmod +x scripts/hooks/*`
-   (installs pre-commit + commit-msg + post-commit)
-4. **Claude Code hooks**: Setup writes the `hooks` block into `.claude/settings.json`
-   (guard-main, guard-db, precompact, session-context). Without it the guards never fire.
-5. **LSP**: Enable TypeScript plugin in `.claude/settings.json`
-6. **MEMORY.md**: Created during setup for persistent lessons
+## Install in a Project
 
-## Configuration Architecture
+1. **Install the plugin** (once per machine, from the project folder):
+   `claude plugin install wf --marketplace brujoh88/workflowIA -s project`
+   (in a project whose `.claude/settings.json` already declares the store: `claude plugin install wf@workflowia -s project`)
+2. **Reopen Claude and run `/wf:setup`**. Its step 0 runs `wf-plantillas`, which copies the
+   per-project files the plugin carries (`CLAUDE.md`, `.claude/project.config.json`, `context/`,
+   `.claude/rules/`, git hooks…) — **only what is missing, never overwriting**.
+3. **Git hooks**: copied to `scripts/hooks/` and enabled with `git config core.hooksPath scripts/hooks`.
+4. **Claude Code hooks** (guard-main, guard-db, verdad-al-escribir, precompact, session-context):
+   nothing to install — they come with the plugin and fire whenever it is enabled.
+5. **For whoever clones**: `/wf:setup` adds a README section with the two commands above. Claude does
+   **not** warn when the plugin is missing (verified in F0), so the README is the only signpost.
+
+**Channels**: `wf@workflowia` follows the latest version. `wf-estable@workflowia` (from the first
+published release) stays on the version marked stable. The version is pinned **per channel**, by
+the workflowIA's `marketplace.json` — a project chooses a channel, not an arbitrary version.
+
+## Plugin Layout (this repository)
+
+```
+.claude-plugin/
+├── plugin.json                  # name "wf", version
+└── marketplace.json             # the "workflowia" store: one entry per channel
+skills/                          # /wf:* commands
+│   ├── discover/ setup/ start/ finish/ review-code/ audit/ explore-code/
+│   ├── fix-issue/ deploy/ metrics/ mcp/            # fix-issue, deploy: user-invoked only
+│   └── architecture-ref/ development-protocol-ref/ ui-design-system-ref/
+agents/                          # 9 agents, available as wf:<name>
+hooks/hooks.json                 # Claude Code hooks (R23), pointing at scripts/
+scripts/                         # what the Claude Code hooks run
+│   ├── claude-guard-main.sh     # denies commit/push on the protected branch
+│   ├── claude-guard-db.sh       # denies destructive DB ops / migrations outside Docker
+│   ├── claude-verdad-al-escribir.sh # R25 lock at write time (uses the project's copy)
+│   ├── claude-precompact.sh     # state snapshot before compaction
+│   └── claude-session-context.sh # re-injects context after compaction
+bin/                             # on the Bash PATH while the plugin is enabled
+│   ├── context-lock             # serializes context writes across parallel sessions
+│   └── wf-plantillas            # copies plantillas/ into a project (used by /wf:setup)
+plantillas/                      # copied ONCE into each project
+    ├── CLAUDE.md                # rules + routing (until F2 splits framework from project)
+    ├── .claude/                 # project.config.json, settings.json, MEMORY.md, rules/
+    ├── .mcp.json  gitignore
+    ├── context/                 # ROUTE, BACKLOG, ROADMAP, FIXES, ENVIRONMENT, README, archive/…
+    └── git-hooks/               # → scripts/hooks/ in the project
+```
+
+Anything at the repository root that Claude Code recognises as a plugin component travels to every
+project (`.mcp.json` did, until it moved to `plantillas/`). Run `claude plugin validate .` before
+adding one.
+
+## Configuration Architecture (a project using the plugin)
 
 ```
 .claude/
 ├── project.config.json          # All project settings (single source of truth)
-├── settings.json                # Claude Code plugin settings + hooks registration (R23)
+├── settings.json                # Declares the wf plugin for the team (no hooks block)
 ├── settings.local.json          # Local permissions (gitignored)
-├── MANUAL.md                    # This file
 ├── MEMORY.md                    # Persistent lessons and preferences
-├── plan/                        # Implementation plans (gitignored except .gitkeep)
-│   ├── .gitkeep
-│   ├── YYYY-MM-DD-desc.md      # Active plans
-│   └── completados/             # Archived plans
-│       └── .gitkeep
-├── docs/                        # Framework documentation
-│   └── QUALITY-SKILLS-CONTRACT.md # Quality skill interface contract
-├── skills/                      # Slash commands
-│   ├── discover/                # /discover - Product framing (run before /setup)
-│   ├── setup/                   # /setup - Configuration wizard
-│   ├── start/                   # /start - Begin feature
-│   ├── finish/                  # /finish - End feature
-│   ├── review-code/             # /review-code - Code audit
-│   ├── audit/                   # /audit - System-wide audit
-│   ├── explore-code/            # /explore-code - Code exploration
-│   ├── fix-issue/               # /fix-issue - Bug fix workflow
-│   ├── deploy/                  # /deploy - Deployment
-│   ├── metrics/                 # /metrics - Project metrics dashboard (NEW)
-│   ├── mcp/                     # /mcp - MCP server management
-│   ├── architecture-ref/        # Auto-loaded architecture patterns
-│   ├── development-protocol-ref/ # Auto-loaded development protocol
-│   └── ui-design-system-ref/    # Auto-loaded UI design reference
-├── agents/                      # 9 specialized agents
-│   ├── session-tracker.md       # Session lifecycle + anti-loop commits
-│   ├── context-provider.md      # Project snapshot + suggested paths
-│   ├── feature-architect.md     # Feature structure + anatomy docs
-│   ├── code-reviewer.md         # Standalone structured audit
-│   ├── code-explorer.md         # Codebase navigation
-│   ├── test-engineer.md         # Tests + coverage BEFORE/AFTER protocol
-│   ├── db-analyst.md            # Schema design + migrations + queries
-│   ├── api-documenter.md        # API documentation audit
-│   └── frontend-integrator.md   # Components + a11y + dark mode
-└── rules/                       # Context-specific rules
-    ├── api.md
-    ├── database.md
-    └── frontend.md
+├── rules/                       # Context-specific rules (api, database, frontend)
+└── plan/                        # Implementation plans (gitignored except .gitkeep)
+    └── completados/             # Archived plans
 
-scripts/
-├── context-lock.sh              # Serializes context writes across parallel sessions
-└── hooks/
-    ├── pre-commit               # git: protected branch, file size, TS errors
-    ├── commit-msg               # git: no AI attribution + conventional format
-    ├── post-commit              # git: registers commits in .pending-commits.log
-    ├── claude-guard-main.sh     # Claude: denies commit/push on protected branch
-    ├── claude-guard-db.sh       # Claude: denies destructive DB ops / migrations outside Docker
-    ├── claude-precompact.sh     # Claude: state snapshot before compaction
-    └── claude-session-context.sh # Claude: re-injects context after compaction
+scripts/hooks/                   # git hooks, versioned with the project
+├── pre-commit                   # protected branch, file size, R25 lock, TS errors
+├── commit-msg                   # no AI attribution + conventional format
+├── post-commit / post-merge     # .pending-commits.log + Engram sync
+└── check-una-sola-verdad.sh + lib-verdades.sh   # the R25 lock
 
 CLAUDE.md                        # Rules and routing (loaded every session — keep it small)
-CLAUDE-CHANGELOG.md              # Framework history (kept out of context on purpose)
 ```
 
 ## Skills (Slash Commands)
@@ -382,9 +386,9 @@ In `project.config.json`:
 ### Lock operations
 
 ```bash
-./scripts/context-lock.sh acquire "session-id" "/start"   # Acquire lock
-./scripts/context-lock.sh release                          # Release lock
-./scripts/context-lock.sh check                            # Check status
+context-lock acquire "session-id" "/start"   # Acquire lock
+context-lock release                          # Release lock
+context-lock check                            # Check status
 ```
 
 Lock auto-expires after `lockTimeoutSeconds` (default: 60s).
@@ -481,8 +485,8 @@ Installed via `git config core.hooksPath scripts/hooks` (make them executable: `
 
 ### Claude Code hooks
 
-Registered in `.claude/settings.json`. **Without that block they never fire** — `/setup` step 7
-writes it.
+Registered in the plugin's `hooks/hooks.json`. **They fire only while the plugin is enabled** — there is nothing to
+install per project.
 
 | Hook | Event | Purpose |
 |------|-------|---------|
@@ -581,12 +585,13 @@ ADRs are preserved in session archives and consolidated feature docs.
 | Archive too large | Rotation not triggered | Manually run rotation: move old sessions to SUMMARY |
 | Stale sessions not detected | `staleSessionThreshold` not set | Add to config: `workflow.staleSessionThreshold: 24` |
 | Quality skill not found | Configured but not installed | Install via symlink or copy to `.claude/skills/` |
-| Context lock stuck | Crash during `/start` or `/finish` | Run `./scripts/context-lock.sh release` manually |
+| Context lock stuck | Crash during `/start` or `/finish` | Run `context-lock release` manually |
 | Parallel sessions conflict | Two operations writing context | Lock auto-expires after `lockTimeoutSeconds` (default: 60s) |
 | state.json corrupted | Crash during parallel session setup | Delete `context/.parallel/state.json`, proceed as normal |
 | Parallel cleanup not done | `/finish` interrupted before cleanup | Delete `context/.parallel/` manually |
 | File domain conflict | Two sessions editing same files | Check `state.json` domains, coordinate via `channel.md` |
-| Guard hook never fires | `hooks` block missing from `.claude/settings.json`, or `git.allowCommitsOnMain` left at `true` after cloning the template | Re-run `/setup` (step 7 writes the block; git config sets the flag to `false`) |
+| Guard hook never fires | The wf plugin is not installed/enabled for this project (Claude does not warn), or `git.allowCommitsOnMain` left at `true` | `claude plugin install wf@workflowia -s project` and reopen; re-run `/wf:setup` (sets the flag to `false`) |
+| Every guard fires twice | The project still has an old `hooks` block pointing at `scripts/hooks/claude-*.sh` besides the plugin | Remove those entries from `.claude/settings.json` (`/wf:setup` step 7) |
 | Guard hook blocks a legitimate command | Pattern matched too broadly (e.g. the word `main` in a path) | Run it yourself in the terminal — the guards only gate Claude's Bash calls |
 | `commit-msg` rejects a valid message | Subject is not conventional format | Use `type(scope): description`, or set `conventions.commits` to something else |
 | Hooks do nothing after clone | Not executable / hooksPath unset | `chmod +x scripts/hooks/*` and `git config core.hooksPath scripts/hooks` |
