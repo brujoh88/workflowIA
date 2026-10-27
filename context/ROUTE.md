@@ -6,15 +6,15 @@
 > Not to be confused with [BACKLOG.md](BACKLOG.md) (the inventory of everything pending, unordered)
 > nor [ROADMAP.md](ROADMAP.md) (the macro picture of the product).
 
-**Updated**: 2026-10-27 · **Next session**: F1 del plugin `wf`
+**Updated**: 2026-10-27 · **Next session**: F2 del plugin `wf`
 
 ---
 
 ## NOW
 
-**[plugin] F1 — reordenar el repo como plugin `wf`** · large (tiene plan) · `.claude/plan/2026-10-27-workflow-como-plugin.md` → F1
-      → arrastra: borrar `spike/wf/`, canales `wf`/`wf-estable` (D3), paso de instalación en el README de `/setup` (D4)
-      ⚠️ leer antes `context/verifications/2026-10-27-plugin-f0.md`
+**[plugin] F2 — partir el CLAUDE.md en reglas del framework y esqueleto del proyecto** · large (tiene plan) · `.claude/plan/2026-10-27-workflow-como-plugin.md` → F2
+      → arrastra: dónde viven MANUAL y QUALITY-SKILLS-CONTRACT en un proyecto con plugin
+      ⚠️ D1: las reglas inyectadas se suman enteras en cada resume — mantenerlas cortas
 
 <!-- One item only. Format:
 - [ ] **A1** · Plain-language statement of the problem · `TICKET-ID` · **small|medium|large**
@@ -28,10 +28,15 @@
 ## QUEUE (in order)
 
 <!-- Same format as NOW. Ordered by what unblocks the most / what hurts the most. -->
+- **[plugin] Generador de `plantilla/` + candado** · medium · después de F2 · `context/BACKLOG.md`
+- **[plugin] F3 — lo que los proyectos editaban pasa a la config** · large (tiene plan)
 
 ---
 
 ## IN PARALLEL (do not take a turn)
+
+- **[plugin]** Textos de skills con prefijo `/wf:` · small
+- **[plugin]** `plantillas/.mcp.json` sin el servidor `db` · small
 
 <!-- Small items that can be done alongside the main one: seeds, one-line fixes,
      environment chores. They do not consume a session. -->
@@ -40,6 +45,7 @@
 
 ## DONE (last 5)
 
+- [x] **20261027-1327** · F1: el workflowIA es un plugin instalable; `/wf:setup` arma un proyecto de cero — `feature/plugin-f1` (2026-10-27)
 - [x] **20261027-1218** · F0 del plugin: las cuatro dudas probadas; fijar versión queda por canal — `context/verifications/2026-10-27-plugin-f0.md` (2026-10-27)
 
 <!-- - [x] **042** · One-line statement of what shipped — `TICKET-ID` (YYYY-MM-DD) -->

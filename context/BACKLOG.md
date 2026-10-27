@@ -11,10 +11,21 @@ _None currently_
 
 ## Next (Prioritized)
 
-- [ ] **[plugin]** F1 — reordenar el repo como plugin `wf`
-  - Context: plan `.claude/plan/2026-10-27-workflow-como-plugin.md`; F0 cerrada (`context/verifications/2026-10-27-plugin-f0.md`)
-  - Criteria: estructura de F1 del plan; `spike/wf/` borrado; canales `wf` y `wf-estable` en la tienda (D3 por canal); paso de instalación para quien clona en el README que genera `/setup` (D4)
-  - Notes: decidir si se borran los tags `wf--v0.1.0`/`wf--v0.2.0` del spike; evaluar el hook de proyecto que avisa si falta el plugin
+- [ ] **[plugin]** F2 — partir el CLAUDE.md: reglas del framework (`reglas/`, inyectadas por `SessionStart`) y esqueleto del proyecto (`plantillas/CLAUDE.md`)
+  - Context: plan, fase F2. D1 probó que la inyección llega en arranque, resume y compact; cada resume la suma entera → reglas cortas
+  - Criteria: `plantillas/CLAUDE.md` sin reglas del framework; reglas `WF-R…` llegan por hook; el CLAUDE.md raíz deja de importar la plantilla
+  - Notes: resolver también dónde viven MANUAL y QUALITY-SKILLS-CONTRACT para un proyecto con plugin (hoy la plantilla los importa con `@` y quedan colgados)
+- [ ] **[plugin]** Generador de `plantilla/` (la versión clonable sin plugin) + candado en `pre-commit` que corta si quedó distinta
+  - Context: decisión 3 del plan; carpeta `plantilla/` en este repo (decidido 2026-10-27). Va después de F2 porque mete las reglas en el CLAUDE.md
+  - Criteria: `scripts/armar-plantilla.sh` la genera; el pre-commit la regenera y corta si difiere
+- [ ] **[plugin]** Textos de los skills: prefijo `/wf:` y sin la opción "Lo escribo yo" que repite "Type something"
+  - Context: visto en la prueba de `/wf:setup` (2026-10-27); el modelo a veces pone el prefijo solo, a veces no
+  - Criteria: ningún skill nombra `/start`, `/finish`… sin `wf:`; las preguntas de texto libre no ofrecen una opción duplicada
+- [ ] **[plugin]** `plantillas/.mcp.json` trae el servidor `db`: en un proyecto sin base falla al conectar
+  - Criteria: la plantilla viene sin `db`, o `/wf:setup` lo saca cuando no hay base de datos
+- [ ] **[plugin]** README raíz con la instalación por plugin (F5)
+  - Notes: esperar a devolver el stash de la R27 (CodeGraph) en main, que toca los mismos README
+
 
 <!-- Add items with format:
 - [ ] **[SCOPE]** Brief description
@@ -24,6 +35,8 @@ _None currently_
 
 ## Completed (Recent)
 
+- [x] **[plugin]** F1 — reordenar el repo como plugin `wf` *(session-20261027-1327-plugin-f1)*
+
 - [x] **[plugin]** F0 — probar D1–D4 del plugin `wf` *(session-20261027-1218-plugin-f0)*
 
 <!-- Items completed in recent sessions. Moved here by /finish.
@@ -32,6 +45,9 @@ Rotated to archive/COMPLETED.md when section grows large.
 -->
 
 ## Ideas / Future
+
+- [ ] **[plugin]** Hook `SessionStart` del proyecto que avise si falta el plugin (D4: hoy quien clona no ve ningún aviso)
+- [ ] **[plugin]** Decidir si se borran los tags `wf--v0.1.0` / `wf--v0.2.0` del spike de F0
 
 <!-- Items without defined priority -->
 
