@@ -10,12 +10,18 @@ History of features merged to main.
 |------|---------|--------|---------|--------|
 | _pending_ | - | - | - | - |
 
+### Q4 (October - December)
+
+| Date | Feature | Branch | Session | Impact |
+|------|---------|--------|---------|--------|
+| 2026-10-27 | F0 del plugin `wf`: D1–D4 probadas, fijar versión por canal | feature/plugin-f0 | 20261027-1218-plugin-f0 | High |
+
 ---
 
 ## Statistics
 
-- **Total completed**: 0
-- **This quarter**: 0
+- **Total completed**: 1
+- **This quarter**: 1
 
 ## Entry Format
 

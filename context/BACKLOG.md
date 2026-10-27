@@ -2,7 +2,7 @@
 
 Single source of pending items for the project.
 
-**Last updated**: -
+**Last updated**: 2026-10-27
 **Target**: <300 lines (cleanup on `/finish`)
 
 ## In Progress
@@ -11,6 +11,11 @@ _None currently_
 
 ## Next (Prioritized)
 
+- [ ] **[plugin]** F1 — reordenar el repo como plugin `wf`
+  - Context: plan `.claude/plan/2026-10-27-workflow-como-plugin.md`; F0 cerrada (`context/verifications/2026-10-27-plugin-f0.md`)
+  - Criteria: estructura de F1 del plan; `spike/wf/` borrado; canales `wf` y `wf-estable` en la tienda (D3 por canal); paso de instalación para quien clona en el README que genera `/setup` (D4)
+  - Notes: decidir si se borran los tags `wf--v0.1.0`/`wf--v0.2.0` del spike; evaluar el hook de proyecto que avisa si falta el plugin
+
 <!-- Add items with format:
 - [ ] **[SCOPE]** Brief description
   - Context: why it's needed
@@ -18,6 +23,8 @@ _None currently_
 -->
 
 ## Completed (Recent)
+
+- [x] **[plugin]** F0 — probar D1–D4 del plugin `wf` *(session-20261027-1218-plugin-f0)*
 
 <!-- Items completed in recent sessions. Moved here by /finish.
 Format: - [x] **[scope]** Description *(session-ID)*

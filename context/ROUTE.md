@@ -6,13 +6,15 @@
 > Not to be confused with [BACKLOG.md](BACKLOG.md) (the inventory of everything pending, unordered)
 > nor [ROADMAP.md](ROADMAP.md) (the macro picture of the product).
 
-**Updated**: - · **Next session**: -
+**Updated**: 2026-10-27 · **Next session**: F1 del plugin `wf`
 
 ---
 
 ## NOW
 
-_Empty — run `/start` to pick the next item, or add the first one here._
+**[plugin] F1 — reordenar el repo como plugin `wf`** · large (tiene plan) · `.claude/plan/2026-10-27-workflow-como-plugin.md` → F1
+      → arrastra: borrar `spike/wf/`, canales `wf`/`wf-estable` (D3), paso de instalación en el README de `/setup` (D4)
+      ⚠️ leer antes `context/verifications/2026-10-27-plugin-f0.md`
 
 <!-- One item only. Format:
 - [ ] **A1** · Plain-language statement of the problem · `TICKET-ID` · **small|medium|large**
@@ -37,6 +39,8 @@ _Empty — run `/start` to pick the next item, or add the first one here._
 ---
 
 ## DONE (last 5)
+
+- [x] **20261027-1218** · F0 del plugin: las cuatro dudas probadas; fijar versión queda por canal — `context/verifications/2026-10-27-plugin-f0.md` (2026-10-27)
 
 <!-- - [x] **042** · One-line statement of what shipped — `TICKET-ID` (YYYY-MM-DD) -->
 
