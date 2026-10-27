@@ -34,7 +34,13 @@ fi
 
 [ -z "$cmd" ] && exit 0
 
-branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+# symbolic-ref names the branch even before the first commit; rev-parse answers "HEAD" there
+# and let a commit on main through unnoticed.
+branch=$(git symbolic-ref --short -q HEAD 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+# A repo with no commits yet: the first commit is the one that creates main, and nothing can
+# branch from a main that does not exist. It is let through on purpose — /setup makes it.
+has_history=1
+git rev-parse --verify -q HEAD >/dev/null 2>&1 || has_history=0
 
 # Detect git commit / git push (tolerating intermediate flags: git -c x commit, git push --force, ...)
 is_commit=0
@@ -43,7 +49,7 @@ printf '%s' "$cmd" | grep -qE '(^|[;&|[:space:]])git[[:space:]]+([^;&|]*[[:space
 printf '%s' "$cmd" | grep -qE '(^|[;&|[:space:]])git[[:space:]]+([^;&|]*[[:space:]])?push'   && is_push=1
 
 # 1) commit while standing on the protected branch
-if [ "$is_commit" = "1" ] && [ "$branch" = "$MAIN_BRANCH" ]; then
+if [ "$is_commit" = "1" ] && [ "$branch" = "$MAIN_BRANCH" ] && [ "$has_history" = "1" ]; then
   echo "BLOCKED (R2): direct commit on '$MAIN_BRANCH'. Switch to a feature/fix branch first." >&2
   exit 2
 fi

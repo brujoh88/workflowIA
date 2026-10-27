@@ -13,8 +13,13 @@ if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
   MAIN_BRANCH=$(jq -r '.git.mainBranch // "main"' "$CONFIG_FILE" 2>/dev/null)
   ALLOW_ON_MAIN=$(jq -r '.git.allowCommitsOnMain // false' "$CONFIG_FILE" 2>/dev/null)
 fi
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-if [ "$ALLOW_ON_MAIN" != "true" ] && [ "$CURRENT_BRANCH" = "$MAIN_BRANCH" ]; then
+# symbolic-ref names the branch even before the first commit (rev-parse answers "HEAD").
+CURRENT_BRANCH=$(git symbolic-ref --short -q HEAD 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+# The first commit of a repo creates main: nothing can branch from a main that does not exist.
+# It is let through on purpose (/setup makes it); from the second one on, main is protected.
+if [ "$ALLOW_ON_MAIN" != "true" ] && [ "$CURRENT_BRANCH" = "$MAIN_BRANCH" ] && ! git rev-parse --verify -q HEAD >/dev/null 2>&1; then
+  echo "pre-commit: initial commit on '$MAIN_BRANCH' allowed (the repo has no history yet). From the next one on, '$MAIN_BRANCH' is protected (R2)."
+elif [ "$ALLOW_ON_MAIN" != "true" ] && [ "$CURRENT_BRANCH" = "$MAIN_BRANCH" ]; then
   echo "pre-commit: direct commit on '$MAIN_BRANCH' is blocked (R2)." >&2
   echo "  '$MAIN_BRANCH' only receives merges. Switch branch first." >&2
   exit 1

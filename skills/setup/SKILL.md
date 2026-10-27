@@ -300,6 +300,28 @@ If they don't exist, create configured folders:
 
 Validate and report: "Context structure verified" or "Created missing directories: {list}"
 
+### 8.5. Initial Commit (only in a repo with no commits)
+
+```bash
+git rev-parse --verify -q HEAD >/dev/null || echo "no history"
+```
+
+If the repo has **no commits yet**, make the initial commit on `{mainBranch}` now, with what setup
+created: the files `wf-plantillas` copied, `.gitignore`, `README.md`, and `.claude/settings.json`.
+List them to the user before committing and stage them by name — never `git add -A`: an empty
+repo can still hold files nobody meant to version (`.env`, dumps).
+
+```bash
+git add <files> && git commit -m "chore: initial project setup (workflowIA)"
+```
+
+Why here: the first commit is the one that **creates** `{mainBranch}`, so the guards let it through
+on purpose (nothing can branch from a main that does not exist). Making it inside setup closes that
+window right away — from the second commit on, `{mainBranch}` is protected (R2).
+
+If the repo already has history, skip this step: setup's changes go in through a branch like any
+other change.
+
 ### 9. Suggest MCP Servers
 
 Based on `project.stack` and `project.description`, suggest relevant MCPs:
@@ -362,6 +384,7 @@ Files created:
 - .claude/MEMORY.md (persistent lessons)
 - .claude/settings.json (declares the wf plugin for the team)
 - README section for whoever clones
+- Initial commit on {mainBranch} (only if the repo had no history)
 - .claude/plan/ (implementation plans)
 - context/auditorias/ (audit reports)
 - Git hooks configured

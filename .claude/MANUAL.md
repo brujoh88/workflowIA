@@ -15,6 +15,8 @@ below a bare `/start` means `/wf:start`.
    per-project files the plugin carries (`CLAUDE.md`, `.claude/project.config.json`, `context/`,
    `.claude/rules/`, git hooks…) — **only what is missing, never overwriting**.
 3. **Git hooks**: copied to `scripts/hooks/` and enabled with `git config core.hooksPath scripts/hooks`.
+   In a repo with no commits yet, setup also makes the initial commit on main: that first commit is
+   let through on purpose (it creates main); from the second one on, main is protected.
 4. **Claude Code hooks** (guard-main, guard-db, verdad-al-escribir, precompact, session-context):
    nothing to install — they come with the plugin and fire whenever it is enabled.
 5. **For whoever clones**: `/wf:setup` adds a README section with the two commands above. Claude does
