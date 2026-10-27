@@ -1,0 +1,11 @@
+{
+  "name": "workflowia",
+  "owner": { "name": "Gustavo Tiseira" },
+  "plugins": [
+    {
+      "name": "wf",
+      "source": "./spike/wf",
+      "description": "Spike F0: plugin mínimo para probar D1–D4 antes de convertir el workflowIA en plugin"
+    }
+  ]
+}
