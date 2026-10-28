@@ -6,29 +6,20 @@
 > Not to be confused with [BACKLOG.md](BACKLOG.md) (the inventory of everything pending, unordered)
 > nor [ROADMAP.md](ROADMAP.md) (the macro picture of the product).
 
-**Updated**: 2026-10-27 · **Next session**: F2 del plugin `wf`
+**Updated**: 2026-10-28 · **Next session**: generador de `plantilla/` + candado
 
 ---
 
 ## NOW
 
-**[plugin] F2 — partir el CLAUDE.md en reglas del framework y esqueleto del proyecto** · large (tiene plan) · `.claude/plan/2026-10-27-workflow-como-plugin.md` → F2
-      → arrastra: dónde viven MANUAL y QUALITY-SKILLS-CONTRACT en un proyecto con plugin
-      ⚠️ D1: las reglas inyectadas se suman enteras en cada resume — mantenerlas cortas
-
-<!-- One item only. Format:
-- [ ] **A1** · Plain-language statement of the problem · `TICKET-ID` · **small|medium|large**
-      → where it lives: `file.ts:120-135` + the query feeding it
-      → carried over: any related debt this drags along
-      ⚠️ anything to verify before touching it
--->
+**[plugin] Generador de `plantilla/` + candado** · medium · `context/BACKLOG.md` (Next)
+      → la versión clonable sin plugin: su CLAUDE.md lleva las reglas de `reglas/REGLAS.md` adentro
 
 ---
 
 ## QUEUE (in order)
 
 <!-- Same format as NOW. Ordered by what unblocks the most / what hurts the most. -->
-- **[plugin] Generador de `plantilla/` + candado** · medium · después de F2 · `context/BACKLOG.md`
 - **[plugin] F3 — lo que los proyectos editaban pasa a la config** · large (tiene plan)
 
 ---
@@ -37,6 +28,7 @@
 
 - **[plugin]** Textos de skills con prefijo `/wf:` · small
 - **[plugin]** `plantillas/.mcp.json` sin el servidor `db` · small
+- **[plugin]** Decidir si "la forma de responder" entra como `WF-R…` · small · `context/BACKLOG.md` (Next)
 
 <!-- Small items that can be done alongside the main one: seeds, one-line fixes,
      environment chores. They do not consume a session. -->
@@ -45,6 +37,7 @@
 
 ## DONE (last 5)
 
+- [x] **20261027-1451** · F2: las reglas del framework llegan por hook como índice corto; la plantilla queda solo con el proyecto — `feature/plugin-f2` (2026-10-28)
 - [x] **20261027-1327** · F1: el workflowIA es un plugin instalable; `/wf:setup` arma un proyecto de cero — `feature/plugin-f1` (2026-10-27)
 - [x] **20261027-1218** · F0 del plugin: las cuatro dudas probadas; fijar versión queda por canal — `context/verifications/2026-10-27-plugin-f0.md` (2026-10-27)
 

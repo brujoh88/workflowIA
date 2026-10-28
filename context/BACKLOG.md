@@ -2,19 +2,15 @@
 
 Single source of pending items for the project.
 
-**Last updated**: 2026-10-27
+**Last updated**: 2026-10-28
 **Target**: <300 lines (cleanup on `/finish`)
 
 ## In Progress
 
-_None currently_
+_nada_
 
 ## Next (Prioritized)
 
-- [ ] **[plugin]** F2 — partir el CLAUDE.md: reglas del framework (`reglas/`, inyectadas por `SessionStart`) y esqueleto del proyecto (`plantillas/CLAUDE.md`)
-  - Context: plan, fase F2. D1 probó que la inyección llega en arranque, resume y compact; cada resume la suma entera → reglas cortas
-  - Criteria: `plantillas/CLAUDE.md` sin reglas del framework; reglas `WF-R…` llegan por hook; el CLAUDE.md raíz deja de importar la plantilla
-  - Notes: resolver también dónde viven MANUAL y QUALITY-SKILLS-CONTRACT para un proyecto con plugin (hoy la plantilla los importa con `@` y quedan colgados)
 - [ ] **[plugin]** Generador de `plantilla/` (la versión clonable sin plugin) + candado en `pre-commit` que corta si quedó distinta
   - Context: decisión 3 del plan; carpeta `plantilla/` en este repo (decidido 2026-10-27). Va después de F2 porque mete las reglas en el CLAUDE.md
   - Criteria: `scripts/armar-plantilla.sh` la genera; el pre-commit la regenera y corta si difiere
@@ -23,6 +19,12 @@ _None currently_
   - Criteria: ningún skill nombra `/start`, `/finish`… sin `wf:`; las preguntas de texto libre no ofrecen una opción duplicada
 - [ ] **[plugin]** `plantillas/.mcp.json` trae el servidor `db`: en un proyecto sin base falla al conectar
   - Criteria: la plantilla viene sin `db`, o `/wf:setup` lo saca cuando no hay base de datos
+- [ ] **[plugin]** F6: migrar las reglas del `CLAUDE.md` de caluprobeauty y fiscoStock-saas (R1–R26 → fuera; referencias → `WF-R…`; propias desde R27 intactas)
+  - Context: sin esto, al instalar el plugin las reglas llegan dos veces y con dos numeraciones. *(from review on feature/plugin-f2, 2026-10-28)*
+  - Criteria: el `CLAUDE.md` de cada proyecto sin reglas del framework; ningún `R1`–`R26` suelto en sus archivos
+- [ ] **[plugin]** Decidir si "la forma de responder" (*Avance / Necesito de vos*) entra al framework como `WF-R…`
+  - Context: el F2 del plan la incluía, pero nunca se escribió. Hoy vive como preferencia personal en el CLAUDE.md global; como regla del framework se le impondría a cualquiera que instale el plugin. *(from review on feature/plugin-f2, 2026-10-28)*
+  - Criteria: decidido; si entra, regla con su línea `>` en `reglas/REGLAS.md`
 - [ ] **[plugin]** README raíz con la instalación por plugin (F5)
   - Notes: esperar a devolver el stash de la R27 (CodeGraph) en main, que toca los mismos README
 
@@ -34,6 +36,8 @@ _None currently_
 -->
 
 ## Completed (Recent)
+
+- [x] **[plugin]** F2 — partir el CLAUDE.md: reglas `WF-R…` por hook, plantilla solo con el proyecto *(session-20261027-1451-plugin-f2)*
 
 - [x] **[plugin]** F1 — reordenar el repo como plugin `wf` *(session-20261027-1327-plugin-f1)*
 
@@ -50,6 +54,9 @@ Rotated to archive/COMPLETED.md when section grows large.
 - [ ] **[plugin]** Decidir si se borran los tags `wf--v0.1.0` / `wf--v0.2.0` del spike de F0
 
 <!-- Items without defined priority -->
+
+- [ ] **[plugin]** `claude-reglas.sh` avisa por stderr si una regla de `REGLAS.md` no tiene línea `>` (hoy sale solo el título, sin aviso) *(from review on feature/plugin-f2, 2026-10-28)*
+- [ ] **[plugin]** `claude-session-context.sh` deja de repetir las 5 reglas que ya trae el índice: solo estado de sesión y líneas que dependen de la config (Docker, workers) *(from review on feature/plugin-f2, 2026-10-28)*
 
 ## Suggested Next Session
 
