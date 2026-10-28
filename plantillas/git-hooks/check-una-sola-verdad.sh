@@ -7,7 +7,7 @@
 # modo de falla no es que rompa, es que **se separe en silencio**: la copia que
 # quedó vieja sigue compilando, sigue pasando los tests y contesta distinto.
 #
-# Por qué es un hook y no una convención: R25 (una regla, una casa) estaba escrita
+# Por qué es un hook y no una convención: WF-R25 (una regla, una casa) estaba escrita
 # en el CLAUDE.md desde el primer día y aun así se agregaron la cuarta y la quinta
 # copia de la misma lista, en la entrega cuya promesa era justamente esa regla.
 # Una regla que depende de acordarse dura hasta la primera sesión sin contexto.

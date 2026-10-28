@@ -1,5 +1,5 @@
 {
-  "description": "Guardrails deterministas del workflow (R23): rama protegida, base de datos, una sola verdad al escribir, foto antes de compactar y contexto después.",
+  "description": "Reglas del framework (WF-R…) al arrancar y guardrails deterministas (WF-R23): rama protegida, base de datos, una sola verdad al escribir, foto antes de compactar y contexto después.",
   "hooks": {
     "PreToolUse": [
       {
@@ -27,6 +27,12 @@
       }
     ],
     "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/claude-reglas.sh" }
+        ]
+      },
       {
         "matcher": "compact",
         "hooks": [

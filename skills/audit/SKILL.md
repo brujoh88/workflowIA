@@ -140,12 +140,12 @@ grep -oE "^[^(]+" /tmp/audit-tsc.txt | sort | uniq -c | sort -rn | head -5   # w
 
 Two different measurements. **Never call the second one "coverage"** — a test file that exists
 and asserts nothing counts as present but covers zero, and reporting that as a percentage against
-`{coverageThreshold}` is a number that lies (R5 requires real coverage).
+`{coverageThreshold}` is a number that lies (WF-R5 requires real coverage).
 
 **E.1 — Real coverage (when `{coverageCmd}` is configured)**
 
 ```bash
-{coverageCmd}    # add --maxWorkers={testMaxWorkers} per R19 if the runner supports it
+{coverageCmd}    # add --maxWorkers={testMaxWorkers} per WF-R19 if the runner supports it
 ```
 
 Report the tool's own numbers: statements / branches / functions / lines. Compare against
@@ -206,7 +206,7 @@ Status is **SKIP**, not PASS. An unmeasured threshold is not a met threshold.
 
 3. Report architectural violations with suggested correct locations.
 
-4. **Duplicated business rules (R25)** — the same question answered in two places:
+4. **Duplicated business rules (WF-R25)** — the same question answered in two places:
    - Build a list of the domain's decision points: state enums, boolean flags exposed by the API
      (`canX`, `isBlocked`, `isComplete`), and threshold comparisons.
    - For each, grep for every site that evaluates it. A rule duplicated by copy-paste rarely
@@ -304,7 +304,7 @@ interchangeable:
 | Unprotected endpoint, injection risk, exposed secret | `context/FIXES.md` → Pending, **severity high** | A live defect, not pending work |
 | Any defect in shipped behaviour | `context/FIXES.md` → Pending | That is the bug registry |
 | Missing tests, missing docs, oversized file, anti-pattern | `context/BACKLOG.md` → Next or Ideas | Tech debt, that is the inventory |
-| Duplicated business rule (R25, module G) | `context/BACKLOG.md` as *"extract {rule} + make all consumers import it"* | It is one job, not one per copy |
+| Duplicated business rule (WF-R25, module G) | `context/BACKLOG.md` as *"extract {rule} + make all consumers import it"* | It is one job, not one per copy |
 | Something that must be done before current work | `context/ROUTE.md` → QUEUE, at the agreed position | That is the queue |
 | A finding the user declines | Nowhere — but **record the decision in the report** | So the next audit does not re-litigate it |
 
@@ -337,7 +337,7 @@ them is how a backlog becomes unreadable.
 | No test framework detected | Skip Module E.1, run E.2, mark coverage as SKIP |
 | `{coverageCmd}` not configured | Run E.2 only, state coverage was not measured, mark SKIP |
 | Coverage command fails | Report the actual error, fall through to E.2 labelled as fallback |
-| Project runs in Docker (`{dockerEnabled}`) | Run test/coverage commands inside `{dbContainer}` or the app container (R18) |
+| Project runs in Docker (`{dockerEnabled}`) | Run test/coverage commands inside `{dbContainer}` or the app container (WF-R18) |
 | No API endpoints found | Skip Modules B, C, F, mark as SKIP |
 | `context/auditorias/` missing | Create directory before writing report |
 | Previous audit report unreadable or malformed | Treat this run as a new baseline and say so — do not silently drop the comparison |

@@ -16,7 +16,7 @@ Capture immediately:
 - **Branch**: !`git branch --show-current`
 - **Commit count**: !`git rev-list --count {mainBranch}..HEAD`
 - **Session start**: (from session file)
-- **Session date**: (the `Date` field in the session file — drives quarter archiving, R22)
+- **Session date**: (the `Date` field in the session file — drives quarter archiving, WF-R22)
 - **Duration**: calculated from session start to now
 - **Plan**: (the `Plan` field in the session file — a path, or why there is none)
 
@@ -86,7 +86,7 @@ Find active session in `context/tmp/session-*.md` matching the current branch.
 ### 2. Run Tests
 
 ```bash
-{testCmd} --maxWorkers={testMaxWorkers}   # R19: limit CPU usage (default: 2)
+{testCmd} --maxWorkers={testMaxWorkers}   # WF-R19: limit CPU usage (default: 2)
 ```
 
 - If fail: STOP and report errors to user
@@ -377,7 +377,7 @@ Ask user if they want to merge to `{baseBranch}`:
 
 Move session from `context/tmp/` to `context/archive/{year}-{quarter}/sessions/`.
 
-**R22 — derive the quarter from the SESSION's date, never from today's**:
+**WF-R22 — derive the quarter from the SESSION's date, never from today's**:
 ```bash
 grep -m1 "^\*\*Date\*\*:" context/tmp/session-{ID}.md
 # month 1-3 → Q1, 4-6 → Q2, 7-9 → Q3, 10-12 → Q4
@@ -487,7 +487,7 @@ git commit -m "docs(context): close session {ID}
 - [ ] Tests passed
 - [ ] Quality skills check completed
 - [ ] Commit created with descriptive message (Co-Authored-By per config)
-- [ ] Session archived with compact summary (quarter from SESSION date, R22)
+- [ ] Session archived with compact summary (quarter from SESSION date, WF-R22)
 - [ ] ROUTE updated (item moved to DONE, next promoted to NOW, new findings queued)
 - [ ] BACKLOG updated (items marked [x] or [~])
 - [ ] BACKLOG cleanup done (under {backlogMaxLines} lines)

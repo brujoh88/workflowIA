@@ -168,4 +168,4 @@ Each new feature/slice SHOULD include an `anatomy.md`:
 
 - Project config: `.claude/project.config.json`
 - Architecture docs: `docs/architecture.md`
-- MANUAL: `.claude/MANUAL.md`
+- MANUAL: `docs/MANUAL.md` in the wf plugin (`${CLAUDE_PLUGIN_ROOT}/docs/MANUAL.md`)

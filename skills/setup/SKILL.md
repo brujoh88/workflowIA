@@ -106,7 +106,7 @@ Ask:
 
 **Always set `git.allowCommitsOnMain: false`** for a derived project — no question asked. It is
 inherited as `true` from the template repository (whose own main branch *is* its working branch)
-and must be turned off, or R2 is silently disabled. Report it in the final summary:
+and must be turned off, or WF-R2 is silently disabled. Report it in the final summary:
 `Protected branch: {mainBranch} (commits blocked)`.
 
 #### 2.6 Code Conventions
@@ -126,7 +126,7 @@ Ask locations:
 
 Ask:
 - **Coverage threshold** (default: 80%): minimum test coverage target
-- **Test max workers** (default: 2): limit CPU usage during tests (R19)
+- **Test max workers** (default: 2): limit CPU usage during tests (WF-R19)
 - **Per-type file limits** (defaults: services 500, components 300, hooks 150, default 400)
 - **External quality skills** (optional): list of external skill names to install via symlinks
   - Example: `["accessibility-checker", "performance-audit"]`
@@ -176,8 +176,8 @@ git config core.hooksPath   # expected: scripts/hooks
 
 The git hooks in `scripts/hooks/`:
 - **post-commit**: auto-registers commits in `context/.pending-commits.log`
-- **pre-commit**: protected branch (R2), quality validation (lint, file size R4, TS errors R16)
-- **commit-msg**: blocks AI attribution (R3) + enforces commit format
+- **pre-commit**: protected branch (WF-R2), quality validation (lint, file size WF-R4, TS errors WF-R16)
+- **commit-msg**: blocks AI attribution (WF-R3) + enforces commit format
 
 They are versioned with the project, so a teammate who clones gets them — but each clone still has
 to run `git config core.hooksPath scripts/hooks` once (git never enables hooks on its own). That
@@ -198,7 +198,7 @@ Ask: **Does the project run its database in Docker?** (default: no)
 If yes, ask for the container name used to run DB commands (e.g. `app-backend-dev`) and save to
 `config.docker = { enabled: true, dbContainer: "..." }`.
 
-This drives `claude-guard-db.sh` (R18): with `enabled: true`, migrations and seeds attempted
+This drives `claude-guard-db.sh` (WF-R18): with `enabled: true`, migrations and seeds attempted
 outside Docker are blocked before they run. Destructive operations are blocked either way.
 
 ### 6.7. Persistent Memory (Engram) — optional
@@ -317,7 +317,7 @@ git add <files> && git commit -m "chore: initial project setup (workflowIA)"
 
 Why here: the first commit is the one that **creates** `{mainBranch}`, so the guards let it through
 on purpose (nothing can branch from a main that does not exist). Making it inside setup closes that
-window right away — from the second commit on, `{mainBranch}` is protected (R2).
+window right away — from the second commit on, `{mainBranch}` is protected (WF-R2).
 
 If the repo already has history, skip this step: setup's changes go in through a branch like any
 other change.

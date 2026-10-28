@@ -1,6 +1,6 @@
 ---
 name: frontend-integrator
-description: Scaffolds frontend components with accessibility, dark mode and quality requirements. Use for frontend work (R8).
+description: Scaffolds frontend components with accessibility, dark mode and quality requirements. Use for frontend work (WF-R8).
 ---
 
 # Agent: Frontend Integrator

@@ -73,7 +73,9 @@ For each available skill that matches the change type (e.g., frontend skill for 
 
 Include the list of invoked/pending/missing quality skills in the final report.
 
-See `.claude/docs/QUALITY-SKILLS-CONTRACT.md` for the expected output format of quality skills.
+See `docs/QUALITY-SKILLS-CONTRACT.md` in the wf plugin (`${CLAUDE_PLUGIN_ROOT}/docs/`; its
+absolute path is in the rule index injected at session start) for the expected output format of
+quality skills.
 
 ## Step 2: Multi-Category Audit
 
@@ -140,7 +142,7 @@ and the user chose to proceed without a plan. Check what that cost:
 Report as an observation, not a violation — the user made an informed call. The point is to catch
 sprawl while it is still one diff.
 
-### 2.6.5 Single Source for Business Rules (Priority: CRITICAL) — R25
+### 2.6.5 Single Source for Business Rules (Priority: CRITICAL) — WF-R25
 
 For **every business condition** this diff introduces or changes ("can X be done?", "is X
 finished?", "is X blocked?"), ask: **does something else already answer this?**

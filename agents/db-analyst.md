@@ -1,6 +1,6 @@
 ---
 name: db-analyst
-description: Database specialist: schema design, migrations, queries and indexes. Use for any database work (R8).
+description: Database specialist: schema design, migrations, queries and indexes. Use for any database work (WF-R8).
 ---
 
 # Agent: Database Analyst

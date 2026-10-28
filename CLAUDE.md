@@ -18,9 +18,20 @@ mismo: sus sesiones, ruta y backlog viven en `context/`, como en cualquier proye
 
 ## Reglas del framework
 
-Hasta F2 (partir el CLAUDE.md), las reglas viven en una sola casa: la plantilla.
+Viven en una sola casa: `reglas/REGLAS.md`. Llegan a cada sesión (también a las de este repo, si
+se abre con `--plugin-dir .`) por el hook `SessionStart` del plugin (`scripts/claude-reglas.sh`),
+como índice corto: el `### WF-R…` de cada regla más la línea `>` de abajo. Esa línea es lo que se
+paga en cada arranque y resume: una oración, ~110 caracteres.
 
-@plantillas/CLAUDE.md
+`plantillas/CLAUDE.md` es el esqueleto del proyecto: arquitectura, comandos, convenciones,
+negocio y reglas propias desde `R27`. No lleva reglas del framework.
+
+## Reglas de este repo
+
+### R27. El MANUAL acompaña al plugin
+Cuando cambia un skill, agente, hook o regla, se actualiza `docs/MANUAL.md` en el mismo commit.
+Es la referencia de uso del framework y la que el hook le muestra a cada proyecto. (Era la R17 del
+framework; en F2 pasó a ser de este repo porque los proyectos no tienen MANUAL propio.)
 
 ## Referencias de este repo
 
@@ -28,5 +39,5 @@ Hasta F2 (partir el CLAUDE.md), las reglas viven en una sola casa: la plantilla.
 - @context/README.md
 - @context/BACKLOG.md
 - @context/ENVIRONMENT.md
-- @.claude/MANUAL.md
+- @docs/MANUAL.md
 - @.claude/MEMORY.md

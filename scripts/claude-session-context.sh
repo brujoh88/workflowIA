@@ -42,13 +42,13 @@ if [ -f "context/tmp/pre-compact-snapshot.md" ]; then
 fi
 
 echo "Critical rules not to forget:"
-echo "  - R2: NEVER commit/push directly to '$MAIN_BRANCH' (merges only, with explicit consent)."
-echo "  - R3: commits WITHOUT AI attribution / Co-Authored-By."
+echo "  - WF-R2: NEVER commit/push directly to '$MAIN_BRANCH' (merges only, with explicit consent)."
+echo "  - WF-R3: commits WITHOUT AI attribution / Co-Authored-By."
 if [ "$DOCKER_ENABLED" = "true" ]; then
-  echo "  - R18: DB commands (migrate/seed) ALWAYS inside Docker."
+  echo "  - WF-R18: DB commands (migrate/seed) ALWAYS inside Docker."
 fi
-echo "  - R19: run tests with --maxWorkers=$TEST_WORKERS, never in background."
-echo "  - R14: zero inference - back every claim with a concrete source (file, grep, git, test output)."
+echo "  - WF-R19: run tests with --maxWorkers=$TEST_WORKERS, never in background."
+echo "  - WF-R14: zero inference - back every claim with a concrete source (file, grep, git, test output)."
 echo "  - Language: always answer in '$CHAT_LANG'."
 echo "==============================================================="
 exit 0

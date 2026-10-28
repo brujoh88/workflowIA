@@ -69,7 +69,7 @@ disguises itself as. Say how to query it instead. -->
 | Coverage | - |
 
 <!-- Note anything that must NOT be done (e.g. running the full suite in parallel saturates
-     the machine — see R19). -->
+     the machine — see WF-R19). -->
 
 ---
 

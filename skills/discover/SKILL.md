@@ -32,7 +32,7 @@ is being built and why**, and derives the stack instead of assuming it is alread
    Do not translate the domain into generic nouns (`User`, `Item`, `Resource`).
 4. **Reflect back before moving on.** After each round, restate what you understood in one or two
    plain sentences. Misunderstandings are cheap here and expensive later.
-5. **R14 applies**: never invent a requirement the user did not state. If something is missing,
+5. **WF-R14 applies**: never invent a requirement the user did not state. If something is missing,
    ask or mark it `UNKNOWN` in the output.
 6. **Do not write code, do not install anything.** This skill only produces documents.
 
@@ -75,7 +75,7 @@ worth building.
 ### B2 — What it touches, and what could break
 - Which existing entities and flows does it involve? Name them from `CLAUDE.md`.
 - Does it change any invariant, or add a new one?
-- **R25 check**: does it introduce a new "can this be done?" question? Grep for who already
+- **WF-R25 check**: does it introduce a new "can this be done?" question? Grep for who already
   answers something similar. If a rule already exists, this feature **imports** it.
 - Who currently sees or does this, and does that change?
 
@@ -207,7 +207,7 @@ Build the recommendation from the constraints collected:
 
 If the user already named a stack, check it against this table. If it conflicts with an invariant,
 say so plainly, in one or two sentences, with the concrete failure it would cause — then let them
-decide (R11: their call, not yours).
+decide (WF-R11: their call, not yours).
 
 Use **WebSearch** if a technology choice depends on current state (maintenance status, a major
 version released recently). Do not rely on memory for "what is current".
@@ -324,10 +324,10 @@ Ask whether to chain into `/setup` now.
 | Problem | Action |
 |---------|--------|
 | User does not know the answer to a round-3 question | Mark the invariant `UNKNOWN`, flag it as a blocker in ROADMAP, keep going. Do not guess an invariant. |
-| User wants a stack that conflicts with an invariant | State the concrete failure in two sentences, then follow their decision (R11) and record the disagreement in the ADR |
+| User wants a stack that conflicts with an invariant | State the concrete failure in two sentences, then follow their decision (WF-R11) and record the disagreement in the ADR |
 | User abandons mid-conversation | Write nothing. Partial framing is worse than none. |
 | Domain is unfamiliar | Ask more round-1 questions. Never fill gaps with generic assumptions about how "these systems usually work". |
 | **Mode B**: the feature turns out to already exist | Say so with the `file:line`, and ask whether the real request is to change its behaviour. Do not queue a duplicate. |
-| **Mode B**: the feature duplicates an existing rule (R25) | Reframe the item as "extract the rule + make all consumers import it", which is a different and usually smaller job |
+| **Mode B**: the feature duplicates an existing rule (WF-R25) | Reframe the item as "extract the rule + make all consumers import it", which is a different and usually smaller job |
 | **Mode B**: it is really three features | Split into separate BACKLOG items with their own sizes. Only the first one enters ROUTE. |
 | **Mode B**: the idea grows past a feature mid-conversation | Stop and offer Mode C. Do not silently rewrite the Business Context. |

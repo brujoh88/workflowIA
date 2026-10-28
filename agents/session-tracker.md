@@ -1,6 +1,6 @@
 ---
 name: session-tracker
-description: Manages the session lifecycle: session files, commit tracking, rotation, FIXES sync and documentation commits. Use on /start and /finish (R8).
+description: Manages the session lifecycle: session files, commit tracking, rotation, FIXES sync and documentation commits. Use on /start and /finish (WF-R8).
 ---
 
 # Agent: Session Tracker

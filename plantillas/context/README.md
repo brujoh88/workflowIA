@@ -57,7 +57,7 @@ context/
 ├── archive/
 │   ├── COMPLETED.md             # History of completed items
 │   └── YYYY-QN/
-│       ├── sessions/            # Archived session files (quarter from SESSION date, R22)
+│       ├── sessions/            # Archived session files (quarter from SESSION date, WF-R22)
 │       └── SUMMARY.md           # One line per session
 ├── auditorias/                  # Audit reports from /audit
 └── consolidated/                # Per finished feature documentation

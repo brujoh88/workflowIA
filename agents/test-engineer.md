@@ -1,6 +1,6 @@
 ---
 name: test-engineer
-description: Creates tests following project conventions, with the coverage BEFORE/AFTER protocol (R5). Use for test creation (R8).
+description: Creates tests following project conventions, with the coverage BEFORE/AFTER protocol (WF-R5). Use for test creation (WF-R8).
 ---
 
 # Agent: Test Engineer

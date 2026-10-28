@@ -17,7 +17,7 @@ below a bare `/start` means `/wf:start`.
 3. **Git hooks**: copied to `scripts/hooks/` and enabled with `git config core.hooksPath scripts/hooks`.
    In a repo with no commits yet, setup also makes the initial commit on main: that first commit is
    let through on purpose (it creates main); from the second one on, main is protected.
-4. **Claude Code hooks** (guard-main, guard-db, verdad-al-escribir, precompact, session-context):
+4. **Claude Code hooks** (guard-main, guard-db, verdad-al-escribir, precompact, reglas, session-context):
    nothing to install — they come with the plugin and fire whenever it is enabled.
 5. **For whoever clones**: `/wf:setup` adds a README section with the two commands above. Claude does
    **not** warn when the plugin is missing (verified in F0), so the README is the only signpost.
@@ -37,18 +37,21 @@ skills/                          # /wf:* commands
 │   ├── fix-issue/ deploy/ metrics/ mcp/            # fix-issue, deploy: user-invoked only
 │   └── architecture-ref/ development-protocol-ref/ ui-design-system-ref/
 agents/                          # 9 agents, available as wf:<name>
-hooks/hooks.json                 # Claude Code hooks (R23), pointing at scripts/
+hooks/hooks.json                 # Claude Code hooks (WF-R23), pointing at scripts/
 scripts/                         # what the Claude Code hooks run
 │   ├── claude-guard-main.sh     # denies commit/push on the protected branch
 │   ├── claude-guard-db.sh       # denies destructive DB ops / migrations outside Docker
-│   ├── claude-verdad-al-escribir.sh # R25 lock at write time (uses the project's copy)
+│   ├── claude-verdad-al-escribir.sh # WF-R25 lock at write time (uses the project's copy)
 │   ├── claude-precompact.sh     # state snapshot before compaction
+│   ├── claude-reglas.sh         # injects the WF-R… rule index on every session start
 │   └── claude-session-context.sh # re-injects context after compaction
 bin/                             # on the Bash PATH while the plugin is enabled
 │   ├── context-lock             # serializes context writes across parallel sessions
 │   └── wf-plantillas            # copies plantillas/ into a project (used by /wf:setup)
+reglas/REGLAS.md                 # the framework rules (WF-R…): full text + one-line index
+docs/                            # framework docs: this MANUAL, QUALITY-SKILLS-CONTRACT
 plantillas/                      # copied ONCE into each project
-    ├── CLAUDE.md                # rules + routing (until F2 splits framework from project)
+    ├── CLAUDE.md                # project skeleton only: architecture, commands, business, R27+
     ├── .claude/                 # project.config.json, settings.json, MEMORY.md, rules/
     ├── .mcp.json  gitignore
     ├── context/                 # ROUTE, BACKLOG, ROADMAP, FIXES, ENVIRONMENT, README, archive/…
@@ -72,12 +75,13 @@ adding one.
     └── completados/             # Archived plans
 
 scripts/hooks/                   # git hooks, versioned with the project
-├── pre-commit                   # protected branch, file size, R25 lock, TS errors
+├── pre-commit                   # protected branch, file size, WF-R25 lock, TS errors
 ├── commit-msg                   # no AI attribution + conventional format
 ├── post-commit / post-merge     # .pending-commits.log + Engram sync
-└── check-una-sola-verdad.sh + lib-verdades.sh   # the R25 lock
+└── check-una-sola-verdad.sh + lib-verdades.sh   # the WF-R25 lock
 
-CLAUDE.md                        # Rules and routing (loaded every session — keep it small)
+CLAUDE.md                        # Project only: architecture, commands, business, rules from R27
+                                 # (framework rules arrive from the plugin, not from here)
 ```
 
 ## Skills (Slash Commands)
@@ -134,7 +138,7 @@ code, no installs.
 ```
 
 **Run Mode B every time a feature idea shows up** — it is the cheap way to find out that the
-thing already exists, or duplicates an existing rule (R25), or should wait behind something else.
+thing already exists, or duplicates an existing rule (WF-R25), or should wait behind something else.
 Four short rounds: what problem and for whom, what it touches and could break, where it belongs
 in the ROADMAP, and what it displaces in the queue.
 
@@ -220,7 +224,7 @@ context/
 ├── archive/
 │   ├── COMPLETED.md             # History of completed items
 │   └── YYYY-QN/
-│       ├── sessions/            # Archived sessions (quarter from SESSION date, R22)
+│       ├── sessions/            # Archived sessions (quarter from SESSION date, WF-R22)
 │       └── SUMMARY.md           # One-line per session summary
 ├── auditorias/                  # Audit reports from /audit
 └── consolidated/                # Per finished feature documentation
@@ -283,7 +287,7 @@ corrected before any code.
 
 **Size signals** in `/start`: item marked large in ROUTE · BACKLOG item with no acceptance
 criteria · touches 3+ ROADMAP modules or creates one · introduces a new business rule ("can X be
-done?", R25) · changes the data model or needs a migration · step 2.7 found related code to
+done?", WF-R25) · changes the data model or needs a migration · step 2.7 found related code to
 extend.
 
 If any fire, it reports **which ones** in plain language and offers three ways out: write the plan
@@ -462,15 +466,16 @@ Requires Context7 MCP server to be installed.
 
 ## Quality Skills Contract
 
-External quality skills can be integrated via `.claude/docs/QUALITY-SKILLS-CONTRACT.md`.
+External quality skills can be integrated via `docs/QUALITY-SKILLS-CONTRACT.md` (in the plugin;
+the session-start rule index prints its absolute path).
 
 - **What**: Specialized quality checks (accessibility, performance, design compliance)
 - **Interface**: Skills produce findings with severity/file/line/description
 - **Installation**: Symlink or copy to `.claude/skills/`, register in `config.quality.externalSkills`
 - **Integration**: Checked by `/review-code` (Step 1.5) and `/finish` (Step 0.5)
-- **Reference**: See `.claude/docs/QUALITY-SKILLS-CONTRACT.md` for full specification
+- **Reference**: See `docs/QUALITY-SKILLS-CONTRACT.md` in the plugin for full specification
 
-## Hooks — the deterministic layer (R23)
+## Hooks — the deterministic layer (WF-R23)
 
 Some rules used to depend on remembering them. These run on their own, before the command does.
 
@@ -480,8 +485,8 @@ Installed via `git config core.hooksPath scripts/hooks` (make them executable: `
 
 | Hook | Purpose | Bypass |
 |------|---------|--------|
-| `pre-commit` | Protected branch (R2), lint, per-type file size (R4), TypeScript errors (R16) | `git commit --no-verify` |
-| `commit-msg` | Blocks AI attribution when `git.coAuthoredBy` is false (R3) + conventional commit format | `git commit --no-verify` |
+| `pre-commit` | Protected branch (WF-R2), lint, per-type file size (WF-R4), TypeScript errors (WF-R16) | `git commit --no-verify` |
+| `commit-msg` | Blocks AI attribution when `git.coAuthoredBy` is false (WF-R3) + conventional commit format | `git commit --no-verify` |
 | `post-commit` | Auto-register commits in `.pending-commits.log` + Engram sync (if enabled) | N/A |
 | `post-merge` | Import Engram memories after pull/merge (if enabled) | N/A |
 
@@ -495,6 +500,7 @@ install per project.
 | `claude-guard-main.sh` | PreToolUse (Bash) | Denies `git commit`/`git push` on the protected branch **before** it runs. Reads `git.mainBranch`. |
 | `claude-guard-db.sh` | PreToolUse (Bash) | Denies destructive DB ops always; denies migrations/seeds outside Docker when `docker.enabled` is true. Covers Prisma, TypeORM, Sequelize, Knex, Alembic, Django, Rails. |
 | `claude-precompact.sh` | PreCompact | Writes `context/tmp/pre-compact-snapshot.md` (branch, active sessions, uncommitted changes, recent commits) before the conversation is summarized. |
+| `claude-reglas.sh` | SessionStart (every source) | Injects the framework rule index (`WF-R…`) and the routing table, built from `reglas/REGLAS.md`. |
 | `claude-session-context.sh` | SessionStart (`compact`) | Re-injects branch, active session, recent commits, current ROUTE item and the rules most often lost after a compaction. |
 
 A PreToolUse hook exiting with code 2 denies the tool call and returns its stderr to Claude as
@@ -527,36 +533,23 @@ nothing happens and nobody is blocked.
 **What it does not do**: replace `context/`. ROUTE, BACKLOG, ROADMAP, FIXES and the session files
 are the record of the project. Engram is recall.
 
-## Enforced Rules (26 total)
+## Enforced Rules (WF-R…)
 
-| # | Rule | Summary |
-|---|------|---------|
-| R1 | Language | Respond/code in configured language |
-| R2 | Git Flow | main protected, branch from dev if configured |
-| R3 | Commits | Co-Authored-By only if configured |
-| R4 | File Size | Enforce per-type maxFileLines/maxFunctionLines — **source code only** |
-| R5 | Testing | Coverage BEFORE/AFTER, target threshold |
-| R6 | Verify First | Glob+Grep before creating, no assumptions |
-| R7 | BACKLOG Compaction | Stay under backlogMaxLines |
-| R8 | Delegation | Mandatory agent/skill delegation |
-| R9 | Plans | Plans in .claude/plan/, archived when done |
-| R10 | Fix Workflows | Quick/complex/batch fix patterns |
-| R11 | No Premature Action | Read → understand → ask |
-| R12 | Debugging Protocol | 3 hypotheses before fixing |
-| R13 | Session Discipline | Every /start creates, every /finish closes |
-| R14 | Zero Inference | Concrete sources only |
-| R15 | Quality Skills | Frontend changes require quality skill check |
-| R16 | LSP Diagnostics | Type errors are blockers |
-| R17 | Sync MANUAL | Update MANUAL when modifying .claude/ |
-| R18 | Docker Environment | DB commands inside container, non-interactive migrations |
-| R19 | CPU Limiting | Test workers capped at `testMaxWorkers` (default: 2) |
-| R20 | Migrations Protocol | Generate diff → review SQL → deploy (non-interactive) |
-| R21 | Parallel Sessions | Shared branch for 2+ sessions, context serialized via lock, atomic commits per scope |
-| R22 | Quarter Detection | Archive by the SESSION's date, never by today's |
-| R23 | Deterministic Guardrails | Hooks enforce R2/R3/R4/R16/R18 before the command runs |
-| R24 | `/fast` Mode | User-only toggle; Claude suggests, never activates |
-| R25 | One Business Rule, One Home | "Is this allowed?" lives in one pure function everyone imports |
-| R26 | Engram (optional) | Persistent recall for decisions and non-obvious root causes |
+The framework rules live in one place: [`reglas/REGLAS.md`](../reglas/REGLAS.md) in the plugin.
+They are not listed here on purpose — a second list would drift.
+
+**How they reach a project**: a plugin cannot bring a `CLAUDE.md`, so `scripts/claude-reglas.sh`
+(SessionStart, every source) injects a short **index** — one line per rule (its `### WF-R…`
+heading plus the `>` line under it) and the document routing table, with the absolute path to the
+full text. Every resume adds that output again, so the index is kept around 5 KB; the full text is
+read on demand.
+
+**Numbering**: framework rules are `WF-R1…WF-R26`; a project's own rules go in its `CLAUDE.md`
+from `R27` on. WF-R17 (sync the MANUAL) was retired in F2 — it now lives in the workflowIA repo's
+own `CLAUDE.md`.
+
+**Adding or changing a rule**: edit `reglas/REGLAS.md`, keep the `>` line to one sentence, and run
+`echo '{}' | CLAUDE_PLUGIN_ROOT=$PWD scripts/claude-reglas.sh` to see exactly what gets injected.
 
 ## Architecture Decision Records (ADR)
 
@@ -616,6 +609,7 @@ ADRs are preserved in session archives and consolidated feature docs.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v3.0-alpha (F2) | 2026-10-28 | CLAUDE.md split: framework rules renamed `WF-R…` and moved to `reglas/REGLAS.md`, injected as an index by `claude-reglas.sh` (SessionStart); `plantillas/CLAUDE.md` keeps only the project skeleton (rules from R27); MANUAL and QUALITY-SKILLS-CONTRACT moved to `docs/` in the plugin; R17 retired from the framework |
 | v2.5 | 2026-08-06 | Deterministic guardrails (guard-main, guard-db, commit-msg), anti context-rot hooks (PreCompact + SessionStart), `context/ROUTE.md` work queue, `ENVIRONMENT.md`, `verifications/`, R22/R23/R24, changelog moved to `CLAUDE-CHANGELOG.md` |
 | v2.4 | 2026-03-20 | Replace Git Worktree with Shared Branch for parallel sessions: combined feature branch, state.json + channel.md coordination, atomic commits per scope, simplified context-lock.sh |
 | v2.3 | 2026-03-13 | Git Worktree for parallel sessions: worktree creation/cleanup in /start and /finish, worktree-aware lock, config, limitations, troubleshooting |

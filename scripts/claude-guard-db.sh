@@ -1,7 +1,7 @@
 #!/bin/bash
 # claude-guard-db.sh - Claude Code PreToolUse hook: database safety.
 # Blocks destructive operations (always) and migrations/seeds run outside Docker
-# (R18, only when docker.enabled is true) BEFORE they execute.
+# (WF-R18, only when docker.enabled is true) BEFORE they execute.
 # exit 2 = deny (stderr -> Claude as feedback).
 # Registered in the plugin's hooks/hooks.json (PreToolUse, matcher "Bash").
 #
@@ -32,12 +32,12 @@ DESTRUCTIVE='migrate[[:space:]]+reset|--force-reset|--accept-data-loss|db[[:spac
 DESTRUCTIVE="$DESTRUCTIVE"'|drop[[:space:]]+(table|database|schema)|truncate[[:space:]]+'
 DESTRUCTIVE="$DESTRUCTIVE"'|schema[[:space:]]+drop|migrate[[:space:]]+fresh|db:drop|dropdb'
 if printf '%s' "$low" | grep -qE "$DESTRUCTIVE"; then
-  echo "BLOCKED (R18): destructive database operation detected." >&2
+  echo "BLOCKED (WF-R18): destructive database operation detected." >&2
   echo "These require EXPLICIT confirmation. If intentional, run it yourself manually." >&2
   exit 2
 fi
 
-# 2) Migration / seed outside Docker (R18) - only enforced when the project uses Docker for the DB
+# 2) Migration / seed outside Docker (WF-R18) - only enforced when the project uses Docker for the DB
 if [ "$DOCKER_ENABLED" = "true" ]; then
   # Common ORM migration/seed entrypoints across stacks
   MIGRATION='prisma[[:space:]]+(migrate|db[[:space:]]+(push|seed|execute)|seed)'
@@ -52,7 +52,7 @@ if [ "$DOCKER_ENABLED" = "true" ]; then
     # "docker" must be invoked as a real executable (docker exec/compose/run), not as a
     # loose substring (a '# docker' comment or a ./docker/ path does not count).
     if ! printf '%s' "$low" | grep -qE '(^|[;&|[:space:]])docker[[:space:]]+(exec|compose|run)'; then
-      echo "BLOCKED (R18): database commands (migrate/seed/push) must run INSIDE Docker." >&2
+      echo "BLOCKED (WF-R18): database commands (migrate/seed/push) must run INSIDE Docker." >&2
       if [ -n "$DB_CONTAINER" ] && [ "$DB_CONTAINER" != "null" ]; then
         echo "Use: docker exec $DB_CONTAINER sh -c '...'   or   docker compose exec ..." >&2
       else

@@ -154,7 +154,7 @@ If potential matches found, report to user:
 
 Runs **before** the branch and session exist, so backing out costs nothing.
 
-**First, check whether a plan already exists** (R9 — an approved plan is executed *starting* with
+**First, check whether a plan already exists** (WF-R9 — an approved plan is executed *starting* with
 `/start`):
 ```
 Glob: .claude/plan/*.md
@@ -184,7 +184,7 @@ be hard to undo, not "3 signals detected"), then ask with `AskUserQuestion`:
 | **Split it into smaller items** | Break it into BACKLOG items with their own sizes; only the first one enters ROUTE. Then stop — the user re-runs `/start` on the first piece. |
 | **Continue without a plan** | Proceed to step 3. Record in the session file which signals fired and that the user chose to skip — so `/review-code` and `/finish` know the scope was accepted as-is. |
 
-The user's answer decides. A signal is a reason to ask once, not a blocker (R11).
+The user's answer decides. A signal is a reason to ask once, not a blocker (WF-R11).
 
 **Never** write the plan *and* create the session in the same run: a plan exists to be read and
 corrected before any code is written.

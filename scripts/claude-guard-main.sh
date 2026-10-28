@@ -1,6 +1,6 @@
 #!/bin/bash
 # claude-guard-main.sh - Claude Code PreToolUse hook (live deterministic layer).
-# Blocks dangerous git operations on the protected branch BEFORE they run (R2).
+# Blocks dangerous git operations on the protected branch BEFORE they run (WF-R2).
 #
 # Receives the event via stdin (JSON). Hook convention:
 #   exit 0 -> allow   |   exit 2 -> DENY and return stderr to Claude as feedback.
@@ -50,7 +50,7 @@ printf '%s' "$cmd" | grep -qE '(^|[;&|[:space:]])git[[:space:]]+([^;&|]*[[:space
 
 # 1) commit while standing on the protected branch
 if [ "$is_commit" = "1" ] && [ "$branch" = "$MAIN_BRANCH" ] && [ "$has_history" = "1" ]; then
-  echo "BLOCKED (R2): direct commit on '$MAIN_BRANCH'. Switch to a feature/fix branch first." >&2
+  echo "BLOCKED (WF-R2): direct commit on '$MAIN_BRANCH'. Switch to a feature/fix branch first." >&2
   exit 2
 fi
 
@@ -58,14 +58,14 @@ fi
 if [ "$is_push" = "1" ]; then
   # a) any push while standing on main (covers bare 'git push', 'git push origin HEAD', ...)
   if [ "$branch" = "$MAIN_BRANCH" ]; then
-    echo "BLOCKED (R2): push from '$MAIN_BRANCH'." >&2
+    echo "BLOCKED (WF-R2): push from '$MAIN_BRANCH'." >&2
     exit 2
   fi
   # b) push whose target is main: origin main, dev:main, +main (force), HEAD:main...
   #    Quotes are stripped to neutralize 'dev:main' / "HEAD:main".
   norm=$(printf '%s' "$cmd" | tr -d "\"'")
   if printf '%s' "$norm" | grep -qE "(^|[[:space:]:+/])${MAIN_BRANCH}([[:space:]:]|$)"; then
-    echo "BLOCKED (R2): push targeting '$MAIN_BRANCH'. It only receives merges with explicit consent." >&2
+    echo "BLOCKED (WF-R2): push targeting '$MAIN_BRANCH'. It only receives merges with explicit consent." >&2
     exit 2
   fi
 fi

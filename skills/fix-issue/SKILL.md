@@ -70,7 +70,7 @@ Report findings:
 | `{file}` | {line} | {why this file is relevant} |
 ```
 
-## Step 4: 3-Hypothesis Debugging Protocol (R12)
+## Step 4: 3-Hypothesis Debugging Protocol (WF-R12)
 
 **MANDATORY**: Before writing any fix, formulate and validate hypotheses.
 
