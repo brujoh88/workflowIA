@@ -17,13 +17,14 @@ History of features merged to main.
 | 2026-10-27 | F0 del plugin `wf`: D1–D4 probadas, fijar versión por canal | feature/plugin-f0 | 20261027-1218-plugin-f0 | High |
 | 2026-10-27 | F1: el workflowIA reordenado como plugin `wf` instalable | feature/plugin-f1 | 20261027-1327-plugin-f1 | High |
 | 2026-10-28 | F2: reglas del framework por hook (`WF-R…`), plantilla solo con el proyecto | feature/plugin-f2 | 20261027-1451-plugin-f2 | High |
+| 2026-10-28 | Generador de `plantilla/` (copia sin plugin) + candado en el pre-commit del repo | feature/generador-plantilla | 20261028-0914-generador-plantilla | Medium |
 
 ---
 
 ## Statistics
 
-- **Total completed**: 3
-- **This quarter**: 3
+- **Total completed**: 4
+- **This quarter**: 4
 
 ## Entry Format
 

@@ -11,9 +11,6 @@ _nada_
 
 ## Next (Prioritized)
 
-- [ ] **[plugin]** Generador de `plantilla/` (la versión clonable sin plugin) + candado en `pre-commit` que corta si quedó distinta
-  - Context: decisión 3 del plan; carpeta `plantilla/` en este repo (decidido 2026-10-27). Va después de F2 porque mete las reglas en el CLAUDE.md
-  - Criteria: `scripts/armar-plantilla.sh` la genera; el pre-commit la regenera y corta si difiere
 - [ ] **[plugin]** Textos de los skills: prefijo `/wf:` y sin la opción "Lo escribo yo" que repite "Type something"
   - Context: visto en la prueba de `/wf:setup` (2026-10-27); el modelo a veces pone el prefijo solo, a veces no
   - Criteria: ningún skill nombra `/start`, `/finish`… sin `wf:`; las preguntas de texto libre no ofrecen una opción duplicada
@@ -25,6 +22,15 @@ _nada_
 - [ ] **[plugin]** Decidir si "la forma de responder" (*Avance / Necesito de vos*) entra al framework como `WF-R…`
   - Context: el F2 del plan la incluía, pero nunca se escribió. Hoy vive como preferencia personal en el CLAUDE.md global; como regla del framework se le impondría a cualquiera que instale el plugin. *(from review on feature/plugin-f2, 2026-10-28)*
   - Criteria: decidido; si entra, regla con su línea `>` en `reglas/REGLAS.md`
+- [ ] **[plugin]** `plantilla/.claude/skills/` aparece como 12 skills duplicados (`plantilla:start`…) en las sesiones de este repo
+  - Context: Claude Code descubre `.claude/skills/` anidados. Ruido y contexto extra en cada sesión del workflowIA; riesgo de usar el skill equivocado. Visto 2026-10-28 al generar la plantilla
+  - Criteria: decidir si la plantilla sale a una rama o repo aparte (la decisión 3 del plan dejaba las tres opciones), o si se acepta
+- [ ] **[plugin]** Una sola regla de "dónde va cada archivo de `plantillas/`" para `armar-plantilla.sh` y `wf-plantillas` *(from review on feature/generador-plantilla, 2026-10-28)*
+  - Context: hoy los dos deciden por su cuenta (`git-hooks/` → `scripts/hooks/`, `gitignore` → `.gitignore`); un mapeo nuevo en uno no llega al otro y el candado no lo nota
+  - Criteria: un helper compartido que usan los dos
+- [ ] **[plugin]** Chequeo automático (CI) de la plantilla + aviso si `core.hooksPath` no es `.githooks` *(from review on feature/generador-plantilla, 2026-10-28)*
+  - Context: quien clona este repo sin `git config core.hooksPath .githooks` no corre el candado y no se entera; los casos del candado se probaron a mano
+  - Criteria: un job que corre el generador y `git diff --exit-code plantilla/`; los casos del candado en un script
 - [ ] **[plugin]** README raíz con la instalación por plugin (F5)
   - Notes: esperar a devolver el stash de la R27 (CodeGraph) en main, que toca los mismos README
 
@@ -37,6 +43,7 @@ _nada_
 
 ## Completed (Recent)
 
+- [x] **[plugin]** Generador de `plantilla/` + candado: `scripts/armar-plantilla.sh` y `.githooks/pre-commit` *(session-20261028-0914-generador-plantilla)*
 - [x] **[plugin]** F2 — partir el CLAUDE.md: reglas `WF-R…` por hook, plantilla solo con el proyecto *(session-20261027-1451-plugin-f2)*
 
 - [x] **[plugin]** F1 — reordenar el repo como plugin `wf` *(session-20261027-1327-plugin-f1)*
