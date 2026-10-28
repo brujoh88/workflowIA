@@ -6,7 +6,7 @@
 **[Leer en Español](README.es.md)**
 
 A battle-tested development workflow for Claude Code, packaged as the plugin **`wf`**. It gives a
-project session tracking, a one-page work queue, 9 specialized agents, 26 framework rules,
+project session tracking, a one-page work queue, 9 specialized agents, the framework rules (`WF-R…`),
 deterministic guardrails that run as hooks, parallel sessions support, and full development
 traceability. Born from 200+ real development sessions.
 
@@ -31,7 +31,7 @@ reaches every project that uses it. Your project keeps only what is its own — 
 - **Evidence Trail** - `verifications/` keeps what was actually tested, separate from what was decided
 - **MEMORY System** - Persistent lessons learned across sessions (optional Engram integration)
 - **Implementation Plans** - Structured plan workflow with archiving
-- **26 Framework Rules** (`WF-R1…WF-R26`) - Injected as a short index at the start of every session
+- **Framework Rules** (`WF-R…`) - Injected as a short index at the start of every session
 - **Parallel Sessions** - Shared branch support for 2+ Claude instances working simultaneously
 - **Context7 Integration** - Up-to-date library documentation during development
 - **Archive Rotation** - Smart cleanup keeping recent sessions, compressing old ones
@@ -275,7 +275,8 @@ checks the WF-R25 rule, so a copy that slipped past the write-time warning still
 
 ## Configuration
 
-All project configuration is stored in `.claude/project.config.json`:
+All project configuration is stored in `.claude/project.config.json` (shown after `/wf:setup`,
+which turns `allowCommitsOnMain` off — the copied file ships with it on):
 
 ```json
 {
@@ -336,7 +337,8 @@ and reference is in [`docs/MANUAL.md`](docs/MANUAL.md).
 
 - [Claude Code CLI](https://claude.ai/claude-code) installed
 - Git
-- `jq` (recommended — hooks read the config with it; without it they fail open)
+- `jq` (recommended — the hooks read `.claude/project.config.json` with it; without it the guards
+  still block, but with defaults: main branch `main`, no `allowCommitsOnMain`, no Docker settings)
 - Node.js, only for the no-plugin clone (`npx degit`)
 
 ## License

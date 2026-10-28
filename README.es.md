@@ -7,7 +7,7 @@
 
 Un flujo de desarrollo battle-tested para Claude Code, empaquetado como el plugin **`wf`**. Le da a
 un proyecto seguimiento de sesiones, una fila de trabajo de una página, 9 agentes especializados,
-26 reglas del framework, guardrails determinísticos que corren como hooks, soporte de sesiones
+las reglas del framework (`WF-R…`), guardrails determinísticos que corren como hooks, soporte de sesiones
 paralelas y trazabilidad completa del desarrollo. Nacido de 200+ sesiones reales de desarrollo.
 
 El workflow vive **en el plugin**, no en tu proyecto: lo instalás una vez, y cada mejora le llega a
@@ -31,7 +31,7 @@ su `CLAUDE.md`.
 - **Rastro de Evidencia** - `verifications/` guarda qué se probó realmente, aparte de qué se decidió
 - **Sistema MEMORY** - Lecciones aprendidas persistentes entre sesiones (integración opcional con Engram)
 - **Planes de Implementación** - Flujo estructurado de planes con archivado
-- **26 Reglas del Framework** (`WF-R1…WF-R26`) - Llegan como índice corto al arrancar cada sesión
+- **Reglas del Framework** (`WF-R…`) - Llegan como índice corto al arrancar cada sesión
 - **Sesiones Paralelas** - Soporte de rama compartida para 2+ instancias de Claude trabajando simultáneamente
 - **Integración Context7** - Documentación actualizada de librerías durante el desarrollo
 - **Rotación Inteligente** - Limpieza que mantiene las sesiones recientes y comprime las viejas
@@ -277,7 +277,8 @@ commit.
 
 ## Configuración
 
-Toda la configuración del proyecto se guarda en `.claude/project.config.json`:
+Toda la configuración del proyecto se guarda en `.claude/project.config.json` (así queda después
+de `/wf:setup`, que apaga `allowCommitsOnMain`; el archivo copiado viene con eso prendido):
 
 ```json
 {
@@ -339,7 +340,9 @@ completo está en [`docs/MANUAL.md`](docs/MANUAL.md).
 
 - [Claude Code CLI](https://claude.ai/claude-code) instalado
 - Git
-- `jq` (recomendado — los hooks leen la config con él; sin él no bloquean nada)
+- `jq` (recomendado — los hooks leen `.claude/project.config.json` con él; sin él los guardrails
+  igual bloquean, pero con valores por defecto: rama principal `main`, sin `allowCommitsOnMain`,
+  sin la config de Docker)
 - Node.js, solo para clonar sin plugin (`npx degit`)
 
 ## Licencia
