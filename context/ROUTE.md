@@ -6,21 +6,20 @@
 > Not to be confused with [BACKLOG.md](BACKLOG.md) (the inventory of everything pending, unordered)
 > nor [ROADMAP.md](ROADMAP.md) (the macro picture of the product).
 
-**Updated**: 2026-10-28 · **Next session**: skills duplicados de `plantilla/` en este repo
+**Updated**: 2026-10-28 · **Next session**: F3
 
 ---
 
 ## NOW
 
-**[plugin] `plantilla/.claude/skills/` aparece como 12 skills `plantilla:*` en las sesiones de este repo** · small (es una decisión) · `context/BACKLOG.md` (Next)
-      → ¿la plantilla sigue en este repo, o pasa a una rama o un repo aparte? Se adelanta a F3: pesa en cada sesión del workflowIA
+**[plugin] F3 — lo que los proyectos editaban pasa a la config** · large (tiene plan)
+      → `.claude/plan/2026-10-27-workflow-como-plugin.md`
 
 ---
 
 ## QUEUE (in order)
 
 <!-- Same format as NOW. Ordered by what unblocks the most / what hurts the most. -->
-- **[plugin] F3 — lo que los proyectos editaban pasa a la config** · large (tiene plan)
 - **[plugin] Una sola regla de "dónde va cada archivo" para el generador y `wf-plantillas`** · small · `context/BACKLOG.md` (Next)
 - **[plugin] CI de la plantilla + aviso si `core.hooksPath` no es `.githooks`** · medium · `context/BACKLOG.md` (Next)
 
@@ -39,6 +38,7 @@
 
 ## DONE (last 5)
 
+- [x] **decisión** · La plantilla para clonar se queda en este repo; los skills `plantilla:*` solo aparecen si se toca la plantilla y se ignoran — `chore/plantilla-se-queda` (2026-10-28)
 - [x] **20261028-0914** · La plantilla para clonar sin plugin se genera sola y un candado no deja commitearla desactualizada — `feature/generador-plantilla` (2026-10-28)
 - [x] **20261027-1451** · F2: las reglas del framework llegan por hook como índice corto; la plantilla queda solo con el proyecto — `feature/plugin-f2` (2026-10-28)
 - [x] **20261027-1327** · F1: el workflowIA es un plugin instalable; `/wf:setup` arma un proyecto de cero — `feature/plugin-f1` (2026-10-27)

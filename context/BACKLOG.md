@@ -22,9 +22,6 @@ _nada_
 - [ ] **[plugin]** Decidir si "la forma de responder" (*Avance / Necesito de vos*) entra al framework como `WF-R…`
   - Context: el F2 del plan la incluía, pero nunca se escribió. Hoy vive como preferencia personal en el CLAUDE.md global; como regla del framework se le impondría a cualquiera que instale el plugin. *(from review on feature/plugin-f2, 2026-10-28)*
   - Criteria: decidido; si entra, regla con su línea `>` en `reglas/REGLAS.md`
-- [ ] **[plugin]** `plantilla/.claude/skills/` aparece como 12 skills duplicados (`plantilla:start`…) en las sesiones de este repo
-  - Context: Claude Code descubre `.claude/skills/` anidados. Ruido y contexto extra en cada sesión del workflowIA; riesgo de usar el skill equivocado. Visto 2026-10-28 al generar la plantilla
-  - Criteria: decidir si la plantilla sale a una rama o repo aparte (la decisión 3 del plan dejaba las tres opciones), o si se acepta
 - [ ] **[plugin]** Una sola regla de "dónde va cada archivo de `plantillas/`" para `armar-plantilla.sh` y `wf-plantillas` *(from review on feature/generador-plantilla, 2026-10-28)*
   - Context: hoy los dos deciden por su cuenta (`git-hooks/` → `scripts/hooks/`, `gitignore` → `.gitignore`); un mapeo nuevo en uno no llega al otro y el candado no lo nota
   - Criteria: un helper compartido que usan los dos
@@ -43,6 +40,7 @@ _nada_
 
 ## Completed (Recent)
 
+- [x] **[plugin]** Skills `plantilla:*` duplicados: la plantilla se queda en este repo. Una sesión nueva no los ve; aparecen solo si se lee algo de `plantilla/`. Anotado en el `CLAUDE.md` que se ignoran *(2026-10-28, sin sesión: era una decisión)*
 - [x] **[plugin]** Generador de `plantilla/` + candado: `scripts/armar-plantilla.sh` y `.githooks/pre-commit` *(session-20261028-0914-generador-plantilla)*
 - [x] **[plugin]** F2 — partir el CLAUDE.md: reglas `WF-R…` por hook, plantilla solo con el proyecto *(session-20261027-1451-plugin-f2)*
 
