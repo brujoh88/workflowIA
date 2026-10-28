@@ -2,7 +2,7 @@
 name: start
 description: Start feature with branch and session tracking
 argument-hint: <feature-name>
-allowed-tools: Bash(git:*), Bash(context-lock:*), Read, Write, Edit, Glob, Grep, mcp__context7__resolve-library-id, mcp__context7__query-docs
+allowed-tools: Bash(git:*), Bash(.claude/wf/bin/context-lock:*), Read, Write, Edit, Glob, Grep, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 # Start Feature: $ARGUMENTS

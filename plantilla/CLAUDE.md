@@ -1,9 +1,8 @@
 # Project [NAME]
 
 > The workflow rules (`WF-R1…WF-R26`), the document routing table and the agent delegation live
-> in `.claude/wf/reglas/REGLAS.md`: a SessionStart hook injects their index at the start of every
-> session. Do not copy them here. This file holds only what belongs to this project. Its own
-> rules start at **R27**.
+> in `.claude/wf/reglas/REGLAS.md`: a SessionStart hook injects their index at the start of every session. Do not copy them here.
+> This file holds only what belongs to this project. Its own rules start at **R27**.
 
 ## Architecture
 - Stack: [Backend/Frontend/DB]

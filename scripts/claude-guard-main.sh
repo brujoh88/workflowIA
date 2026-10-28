@@ -4,7 +4,7 @@
 #
 # Receives the event via stdin (JSON). Hook convention:
 #   exit 0 -> allow   |   exit 2 -> DENY and return stderr to Claude as feedback.
-# Registered in the plugin's hooks/hooks.json (PreToolUse, matcher "Bash").
+# Registered in hooks/hooks.json (plugin) or .claude/settings.json (template): PreToolUse, matcher "Bash".
 #
 # NOTE: complements the pre-commit git hook. This one runs inside the agent loop
 # (before the command executes); the git hook runs at commit time.

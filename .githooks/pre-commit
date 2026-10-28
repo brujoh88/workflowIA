@@ -4,6 +4,10 @@
 #
 # El candado: plantilla/ se genera desde el plugin con scripts/armar-plantilla.sh. Si se tocó el
 # plugin sin regenerarla, o se editó la plantilla a mano, el commit no pasa.
+#
+# Mira lo que se va a commitear (el índice), no el disco: exporta el índice a una carpeta temporal,
+# genera la plantilla desde ahí y la compara con la plantilla/ de ese mismo índice. Así un cambio
+# sin agregar no se cuela en el commit ni frena uno que no tiene nada que ver.
 
 RAIZ="$(git rev-parse --show-toplevel)"
 
@@ -13,24 +17,22 @@ echo "pre-commit: Checking plantilla/ matches the plugin..."
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-if ! "$RAIZ/scripts/armar-plantilla.sh" "$TMP/plantilla" >/dev/null; then
+git checkout-index -a --prefix="$TMP/indice/"
+
+if ! "$TMP/indice/scripts/armar-plantilla.sh" "$TMP/generada" >/dev/null; then
   echo "pre-commit: scripts/armar-plantilla.sh falló; no puedo verificar plantilla/." >&2
   exit 1
 fi
 
-if ! diff -rq "$TMP/plantilla" "$RAIZ/plantilla" >/dev/null 2>&1; then
-  echo "pre-commit: plantilla/ no coincide con lo que sale del plugin:" >&2
-  diff -rq "$TMP/plantilla" "$RAIZ/plantilla" 2>&1 | sed "s#$TMP/##; s#$RAIZ/##; s/^/  /" | head -20 >&2
+# Contenido y permisos (diff -r no mira el bit de ejecución)
+listar() { (cd "$1" 2>/dev/null && find . -printf '%m %p\n' | sort); }
+if ! diff -rq "$TMP/generada" "$TMP/indice/plantilla" >/dev/null 2>&1 ||
+   [ "$(listar "$TMP/generada")" != "$(listar "$TMP/indice/plantilla")" ]; then
+  echo "pre-commit: la plantilla/ que vas a commitear no coincide con lo que sale del plugin:" >&2
+  { diff -rq "$TMP/generada" "$TMP/indice/plantilla" 2>&1
+    diff <(listar "$TMP/generada") <(listar "$TMP/indice/plantilla") | grep '^[<>]'
+  } | sed "s#$TMP/generada#plantilla(generada)#g; s#$TMP/indice/##g; s/^/  /" | head -20 >&2
   echo "  Regenerala y agregala: scripts/armar-plantilla.sh && git add plantilla/" >&2
-  exit 1
-fi
-
-# Lo que se commitea es el índice: la plantilla al día tiene que estar agregada entera
-SUELTOS=$( { git diff --name-only -- plantilla/; git ls-files --others --exclude-standard -- plantilla/; } )
-if [ -n "$SUELTOS" ]; then
-  echo "pre-commit: plantilla/ está regenerada pero sin agregar al commit:" >&2
-  echo "$SUELTOS" | head -10 | sed 's/^/  /' >&2
-  echo "  git add plantilla/" >&2
   exit 1
 fi
 

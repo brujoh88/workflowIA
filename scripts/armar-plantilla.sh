@@ -26,6 +26,11 @@ WF=".claude/wf"
 
 command -v jq >/dev/null 2>&1 || { echo "armar-plantilla: necesito jq" >&2; exit 1; }
 
+# Seguro: sólo se borra una carpeta vacía o una plantilla ya generada (con su LEEME).
+if [ -e "$DESTINO" ] && [ -n "$(ls -A "$DESTINO" 2>/dev/null)" ] && [ ! -f "$DESTINO/$WF/LEEME.md" ]; then
+  echo "armar-plantilla: $DESTINO no está vacía y no es una plantilla generada; no la borro." >&2
+  exit 1
+fi
 rm -rf "$DESTINO"
 mkdir -p "$DESTINO"
 
@@ -60,6 +65,30 @@ jq --slurpfile h "$RAIZ/hooks/hooks.json" '
       if type == "string" then sub("\"\\$\\{CLAUDE_PLUGIN_ROOT\\}\""; "\"$CLAUDE_PROJECT_DIR\"/.claude/wf") else . end))
 ' "$RAIZ/plantillas/.claude/settings.json" > "$DESTINO/.claude/settings.json"
 
+# Reemplazos de texto: cada uno tiene que encontrar lo que busca. Si el original cambió de
+# redacción, el generador corta acá en vez de dejar una plantilla a medio adaptar (el candado no lo
+# notaría: compara el generador contra sí mismo).
+cambiar() {  # cambiar <archivo> <texto exacto> <reemplazo>
+  python3 - "$@" <<'PY' || { echo "armar-plantilla: no encontré el texto a cambiar en ${1#"$DESTINO/"}:" >&2; printf '  %s\n' "$2" | head -3 >&2; exit 1; }
+import sys
+ruta, viejo, nuevo = sys.argv[1:4]
+s = open(ruta, encoding="utf-8").read()
+if viejo not in s: sys.exit(1)
+open(ruta, "w", encoding="utf-8").write(s.replace(viejo, nuevo))
+PY
+}
+cambiar_seccion() {  # cambiar_seccion <archivo> <encabezado "### N. "> : el texto nuevo llega por stdin
+  local nuevo; nuevo=$(cat)
+  python3 - "$1" "$2" "$nuevo" <<'PY' || { echo "armar-plantilla: no encontré la sección '$2' en ${1#"$DESTINO/"}" >&2; exit 1; }
+import sys, re
+ruta, encabezado, nuevo = sys.argv[1:4]
+s = open(ruta, encoding="utf-8").read()
+m = re.search(r"^" + re.escape(encabezado) + r".*?(?=^### |\Z)", s, re.S | re.M)
+if not m: sys.exit(1)
+open(ruta, "w", encoding="utf-8").write(s[:m.start()] + nuevo.rstrip("\n") + "\n\n" + s[m.end():])
+PY
+}
+
 # 4. Textos: sin el plugin no hay prefijo /wf: ni wf:<agente>, ni ${CLAUDE_PLUGIN_ROOT}, ni bin/
 #    en el PATH. docs/ queda como está: el MANUAL describe el plugin y tiene su sección sin plugin.
 find "$DESTINO/.claude/skills" "$DESTINO/.claude/agents" "$DESTINO/$WF/reglas" -type f -name '*.md' -print0 |
@@ -67,13 +96,27 @@ find "$DESTINO/.claude/skills" "$DESTINO/.claude/agents" "$DESTINO/$WF/reglas" -
     -e 's#/wf:#/#g' \
     -e 's#`wf:\([a-z]\)#`\1#g' \
     -e 's#\${CLAUDE_PLUGIN_ROOT}#$CLAUDE_PROJECT_DIR/.claude/wf#g' \
-    -e 's#\bcontext-lock \(acquire\|release\|check\)#.claude/wf/bin/context-lock \1#g'
-sed -i 's#(injected by the wf plugin)#(injected from .claude/wf)#' "$DESTINO/$WF/scripts/claude-reglas.sh"
+    -e 's#\bcontext-lock \(acquire\|release\|check\)#.claude/wf/bin/context-lock \1#g' \
+    -e 's#Bash(context-lock:\*)#Bash(.claude/wf/bin/context-lock:*)#g'
 
-# 5. /setup: el paso 0 del plugin copia plantillas; acá ya están en su lugar
+REGLAS="$DESTINO/$WF/reglas/REGLAS.md"
+cambiar "$REGLAS" "\`docs/QUALITY-SKILLS-CONTRACT.md\` in the plugin" "\`.claude/wf/docs/QUALITY-SKILLS-CONTRACT.md\`"
+cambiar "$REGLAS" "\`context-lock\` (on the PATH, comes
+  with the wf plugin)" "\`.claude/wf/bin/context-lock\`"
+cambiar "$REGLAS" "The Claude Code hooks come with the **wf plugin** and fire whenever it is enabled." \
+  "The Claude Code hooks live in \`.claude/wf/scripts/\` and are declared in \`.claude/settings.json\`."
+
+# 5. /setup: los pasos del plugin (copiar plantillas, declararlo, instalarlo) no aplican a un clon
 SETUP="$DESTINO/.claude/skills/setup/SKILL.md"
-PASO0=$(mktemp)
-cat > "$PASO0" <<'EOF'
+cambiar "$SETUP" "Bash(wf-plantillas:*), " ""
+cambiar "$SETUP" "Interactive wizard to configure a project that uses the workflowIA plugin (\`wf\`)." \
+  "Interactive wizard to configure a project cloned from the workflowIA template (no plugin)."
+cambiar "$SETUP" "the files \`wf-plantillas\` copied, " "the files that came with the template, "
+cambiar "$SETUP" ".claude/settings.json (declares the wf plugin for the team)" \
+  ".claude/settings.json (declares the workflow's Claude Code hooks)"
+cambiar "$SETUP" "are not copied: they come with the plugin and fire whenever it is enabled." \
+  "live in \`.claude/wf/scripts/\` and are declared in \`.claude/settings.json\`."
+cambiar_seccion "$SETUP" "### 0. " <<'EOF'
 ### 0. Hook Up the Git Hooks
 
 This project was cloned from the workflowIA template (no plugin): every file is already in place,
@@ -84,34 +127,36 @@ enabling, since git never carries that setting with a clone:
 chmod +x scripts/hooks/* .claude/wf/scripts/* .claude/wf/bin/*
 git config core.hooksPath scripts/hooks
 ```
-
-Skip anything below about installing the wf plugin or declaring its store: this copy does not use
-it. Its Claude Code hooks are already in `.claude/settings.json`.
-
 EOF
-awk -v paso0="$PASO0" '
-  /^Interactive wizard to configure a project that uses the workflowIA plugin/ {
-    print "Interactive wizard to configure a project cloned from the workflowIA template (no plugin)."; next
-  }
-  /^### 0\. / { while ((getline l < paso0) > 0) print l; saltar = 1; next }
-  saltar && /^### / { saltar = 0 }
-  !saltar
-' "$SETUP" > "$SETUP.nuevo" && mv "$SETUP.nuevo" "$SETUP"
-rm -f "$PASO0"
+cambiar_seccion "$SETUP" "### 7. " <<'EOF'
+### 7. Check settings.json
+
+`.claude/settings.json` declares the workflow's Claude Code hooks (`hooks` block, pointing at
+`.claude/wf/scripts/`). Keep that block. Do **not** install the wf plugin on top of this copy:
+every guard would fire twice. Moving to the plugin means removing `.claude/wf/`, the `hooks` block,
+`.claude/skills/` and `.claude/agents/` first.
+EOF
+cambiar_seccion "$SETUP" "### 7.6. " <<'EOF'
+### 7.6. README: how someone who clones gets started
+
+Git never enables hooks on its own, so the step goes in the project's README, near the top. Add
+this section (create the README if there is none; do not duplicate it if it is already there):
+
+```markdown
+## Working on this project with Claude Code
+
+Once per clone, from the project folder:
+
+    git config core.hooksPath scripts/hooks
+
+Then open Claude. The workflow commands are `/start`, `/finish`, `/review-code`.
+```
+EOF
 
 # 6. CLAUDE.md: las reglas no vienen del plugin sino de .claude/wf/
-CLAUDE_MD="$DESTINO/CLAUDE.md"
-awk '
-  /^> The workflow rules/ {
-    print "> The workflow rules (`WF-R1…WF-R26`), the document routing table and the agent delegation live"
-    print "> in `.claude/wf/reglas/REGLAS.md`: a SessionStart hook injects their index at the start of every"
-    print "> session. Do not copy them here. This file holds only what belongs to this project. Its own"
-    print "> rules start at **R27**."
-    saltar = 1; next
-  }
-  saltar && /^>/ { next }
-  { saltar = 0; print }
-' "$CLAUDE_MD" > "$CLAUDE_MD.nuevo" && mv "$CLAUDE_MD.nuevo" "$CLAUDE_MD"
+cambiar "$DESTINO/CLAUDE.md" "come
+> with the **wf plugin**: it injects them at the start of every session." "live
+> in \`.claude/wf/reglas/REGLAS.md\`: a SessionStart hook injects their index at the start of every session."
 
 # 7. Marca de origen
 VERSION=$(jq -r .version "$RAIZ/.claude-plugin/plugin.json")

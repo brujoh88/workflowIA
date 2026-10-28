@@ -4,7 +4,7 @@
 # working state so it survives the summary.
 #
 # Receives the event via stdin (JSON with .trigger = manual|auto). Always exits 0.
-# Registered in the plugin's hooks/hooks.json (PreCompact).
+# Registered in hooks/hooks.json (plugin) or .claude/settings.json (template): PreCompact.
 
 set -uo pipefail
 input=$(cat 2>/dev/null || true)

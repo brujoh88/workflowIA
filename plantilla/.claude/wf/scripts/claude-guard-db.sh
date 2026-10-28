@@ -3,7 +3,7 @@
 # Blocks destructive operations (always) and migrations/seeds run outside Docker
 # (WF-R18, only when docker.enabled is true) BEFORE they execute.
 # exit 2 = deny (stderr -> Claude as feedback).
-# Registered in the plugin's hooks/hooks.json (PreToolUse, matcher "Bash").
+# Registered in hooks/hooks.json (plugin) or .claude/settings.json (template): PreToolUse, matcher "Bash".
 #
 # NOTE: read-only / codegen commands (prisma generate, migrate diff, migrate status)
 # are allowed on the host.

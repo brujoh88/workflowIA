@@ -1,7 +1,7 @@
 ---
 name: setup
 description: Interactive wizard to configure the project
-allowed-tools: Read, Write, Edit, Bash(wf-plantillas:*), Bash(mkdir:*), Bash(git:*), Bash(chmod:*), Bash(cp:*), AskUserQuestion
+allowed-tools: Read, Write, Edit, Bash(mkdir:*), Bash(git:*), Bash(chmod:*), Bash(cp:*), AskUserQuestion
 ---
 
 # Project Setup
@@ -20,9 +20,6 @@ enabling, since git never carries that setting with a clone:
 chmod +x scripts/hooks/* .claude/wf/scripts/* .claude/wf/bin/*
 git config core.hooksPath scripts/hooks
 ```
-
-Skip anything below about installing the wf plugin or declaring its store: this copy does not use
-it. Its Claude Code hooks are already in `.claude/settings.json`.
 
 ### 0.5. Check if the Project is Framed
 
@@ -175,7 +172,7 @@ to run `git config core.hooksPath scripts/hooks` once (git never enables hooks o
 line goes in the README (step 7.6).
 
 The **Claude Code** hooks (guard-main, guard-db, verdad-al-escribir, precompact, session-context)
-are not copied: they come with the plugin and fire whenever it is enabled.
+live in `.claude/wf/scripts/` and are declared in `.claude/settings.json`.
 
 ### 6. Create MEMORY.md (if not exists)
 
@@ -212,27 +209,10 @@ having it installed.
 
 ### 7. Check settings.json
 
-Step 0 copied `.claude/settings.json` if the project had none. It declares the plugin for the whole
-team (`extraKnownMarketplaces` + `enabledPlugins`) — **no `hooks` block**: the hooks come with the
-plugin.
-
-If the project already had its own `settings.json`, make sure it contains (merge, do not overwrite):
-```json
-{
-  "extraKnownMarketplaces": {
-    "workflowia": { "source": { "source": "github", "repo": "brujoh88/workflowIA" } }
-  },
-  "enabledPlugins": { "wf@workflowia": true }
-}
-```
-
-If it still has a `hooks` block pointing at `scripts/hooks/claude-*.sh` (a project that copied the
-framework before it was a plugin), remove those entries: the plugin already runs them, and leaving
-both makes every guard fire twice. Hooks of the project's own stay.
-
-**Channel**: `wf@workflowia` follows the latest version. A project that must not receive changes
-mid-delivery uses the stable channel (`wf-estable@workflowia`) once it is published — the version is
-pinned per channel by the workflowIA, not per project.
+`.claude/settings.json` declares the workflow's Claude Code hooks (`hooks` block, pointing at
+`.claude/wf/scripts/`). Keep that block. Do **not** install the wf plugin on top of this copy:
+every guard would fire twice. Moving to the plugin means removing `.claude/wf/`, the `hooks` block,
+`.claude/skills/` and `.claude/agents/` first.
 
 ### 7.5. Create settings.local.json template (if not exists)
 
@@ -259,17 +239,14 @@ Inform user: "Created `.claude/settings.local.json` with recommended permissions
 
 ### 7.6. README: how someone who clones gets started
 
-Whoever clones the project sees **no warning** when the plugin is missing: Claude opens without it
-and the only trace is an error tab inside `/plugin` (verified, `context/verifications/2026-10-27-plugin-f0.md`
-in the workflowIA). So the steps go in the project's README, near the top. Add this section (create
-the README if there is none; do not duplicate it if it is already there):
+Git never enables hooks on its own, so the step goes in the project's README, near the top. Add
+this section (create the README if there is none; do not duplicate it if it is already there):
 
 ```markdown
 ## Working on this project with Claude Code
 
-Once per machine, from the project folder:
+Once per clone, from the project folder:
 
-    claude plugin install wf@workflowia -s project
     git config core.hooksPath scripts/hooks
 
 Then open Claude. The workflow commands are `/start`, `/finish`, `/review-code`.
@@ -298,7 +275,7 @@ git rev-parse --verify -q HEAD >/dev/null || echo "no history"
 ```
 
 If the repo has **no commits yet**, make the initial commit on `{mainBranch}` now, with what setup
-created: the files `wf-plantillas` copied, `.gitignore`, `README.md`, and `.claude/settings.json`.
+created: the files that came with the template, `.gitignore`, `README.md`, and `.claude/settings.json`.
 List them to the user before committing and stage them by name — never `git add -A`: an empty
 repo can still hold files nobody meant to version (`.env`, dumps).
 
@@ -373,7 +350,7 @@ Quality:
 
 Files created:
 - .claude/MEMORY.md (persistent lessons)
-- .claude/settings.json (declares the wf plugin for the team)
+- .claude/settings.json (declares the workflow's Claude Code hooks)
 - README section for whoever clones
 - Initial commit on {mainBranch} (only if the repo had no history)
 - .claude/plan/ (implementation plans)

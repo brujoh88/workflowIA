@@ -160,7 +160,7 @@ navigation, `/explore-code`), `api-documenter` (API documentation audit).
   - Consult them during development
   - `/review-code` checks if they were invoked
   - `/finish` warns if they were skipped
-- The expected output of a quality skill: `docs/QUALITY-SKILLS-CONTRACT.md` in the plugin.
+- The expected output of a quality skill: `.claude/wf/docs/QUALITY-SKILLS-CONTRACT.md`.
 
 ### WF-R16. LSP Diagnostics Block Development
 > Type errors are blockers: fix them before writing new code.
@@ -196,8 +196,7 @@ For projects using ORMs (Prisma, TypeORM, etc.) with Docker:
 
 - **1 active session**: normal feature branch, no special handling
 - **2+ active sessions**: sessions share a combined feature branch (e.g., `feature/A--B`)
-- Context writes (README, BACKLOG, ROADMAP) are serialized via `context-lock` (on the PATH, comes
-  with the wf plugin). Lock timeout: `parallel.lockTimeoutSeconds` (default: 60s)
+- Context writes (README, BACKLOG, ROADMAP) are serialized via `.claude/wf/bin/context-lock`. Lock timeout: `parallel.lockTimeoutSeconds` (default: 60s)
 - Code work is 100% parallelizable (no lock needed for coding)
 - Coordination via `{parallel.sharedBranch.directory}/state.json` + `channel.md` (gitignored)
 - Each session commits only its own files with atomic commits (`git commit <files> -m "..."`)
@@ -236,7 +235,7 @@ If the quarter folder does not exist, create it with its `SUMMARY.md`.
 | `claude-reglas.sh` | SessionStart | Injects this rule index |
 | `claude-session-context.sh` | SessionStart (compact) | Re-injects branch, active session, critical rules |
 
-The Claude Code hooks come with the **wf plugin** and fire whenever it is enabled. The git hooks
+The Claude Code hooks live in `.claude/wf/scripts/` and are declared in `.claude/settings.json`. The git hooks
 live in the project's `scripts/hooks/`, enabled per clone with `git config core.hooksPath scripts/hooks`.
 Emergency bypass for git hooks only: `git commit --no-verify`.
 

@@ -4,7 +4,7 @@
 # context-rot (detail lost when the conversation is summarized).
 #
 # Receives the event via stdin (JSON with .source). Always exits 0.
-# Registered in the plugin's hooks/hooks.json (SessionStart, matcher "compact").
+# Registered in hooks/hooks.json (plugin) or .claude/settings.json (template): SessionStart, matcher "compact".
 
 set -uo pipefail
 cat >/dev/null 2>&1 || true   # consume stdin
