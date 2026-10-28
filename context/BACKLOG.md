@@ -11,6 +11,13 @@ _nada_
 
 ## Next (Prioritized)
 
+- [ ] **[plugin]** Publicar: push de main y apuntar la tienda `workflowia` de esta máquina a main
+  - Context: el README nuevo describe la instalación desde GitHub, que hoy falla ("Marketplace file not found") porque los commits del plugin no están pusheados; la tienda local apunta a `feature/plugin-f1`. *(session-20261028-1341-readme-plugin)*
+  - Criteria: `claude plugin install wf --marketplace brujoh88/workflowIA -s project` anda en una carpeta vacía; `npx degit brujoh88/workflowIA/plantilla` trae la copia
+- [ ] **[plugin]** Decidir qué hacer con el stash "README: R27 CodeGraph" (apartado en F0)
+  - Context: habla de una regla CodeGraph y de `scripts/codegraph.sh` que no existen en el repo; el README nuevo ya no lista reglas. *(session-20261028-1341-readme-plugin)*
+  - Criteria: o CodeGraph entra como ítem propio (regla + script), o el stash se descarta
+
 - [ ] **[plugin]** Textos de los skills: prefijo `/wf:` y sin la opción "Lo escribo yo" que repite "Type something"
   - Context: visto en la prueba de `/wf:setup` (2026-10-27); el modelo a veces pone el prefijo solo, a veces no
   - Criteria: ningún skill nombra `/start`, `/finish`… sin `wf:`; las preguntas de texto libre no ofrecen una opción duplicada
@@ -28,8 +35,6 @@ _nada_
 - [ ] **[plugin]** Chequeo automático (CI) de la plantilla + aviso si `core.hooksPath` no es `.githooks` *(from review on feature/generador-plantilla, 2026-10-28)*
   - Context: quien clona este repo sin `git config core.hooksPath .githooks` no corre el candado y no se entera; los casos del candado se probaron a mano
   - Criteria: un job que corre el generador y `git diff --exit-code plantilla/`; los casos del candado en un script
-- [ ] **[plugin]** README raíz con la instalación por plugin (F5)
-  - Notes: esperar a devolver el stash de la R27 (CodeGraph) en main, que toca los mismos README
 
 
 <!-- Add items with format:
@@ -40,6 +45,7 @@ _nada_
 
 ## Completed (Recent)
 
+- [x] **[plugin]** README raíz con la instalación por plugin, la copia sin plugin y cómo mejorar el workflow (F5) *(session-20261028-1341-readme-plugin)*
 - [x] **[plugin]** Skills `plantilla:*` duplicados: la plantilla se queda en este repo. Una sesión nueva no los ve; aparecen solo si se lee algo de `plantilla/`. Anotado en el `CLAUDE.md` que se ignoran *(2026-10-28, sin sesión: era una decisión)*
 - [x] **[plugin]** Generador de `plantilla/` + candado: `scripts/armar-plantilla.sh` y `.githooks/pre-commit` *(session-20261028-0914-generador-plantilla)*
 - [x] **[plugin]** F2 — partir el CLAUDE.md: reglas `WF-R…` por hook, plantilla solo con el proyecto *(session-20261027-1451-plugin-f2)*

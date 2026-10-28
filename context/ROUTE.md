@@ -20,6 +20,7 @@
 ## QUEUE (in order)
 
 <!-- Same format as NOW. Ordered by what unblocks the most / what hurts the most. -->
+- **[plugin] Publicar: push de main + tienda local apuntando a main** · small · lo hace el usuario · `context/BACKLOG.md` (Next)
 - **[plugin] Una sola regla de "dónde va cada archivo" para el generador y `wf-plantillas`** · small · `context/BACKLOG.md` (Next)
 - **[plugin] CI de la plantilla + aviso si `core.hooksPath` no es `.githooks`** · medium · `context/BACKLOG.md` (Next)
 
@@ -29,6 +30,7 @@
 
 - **[plugin]** Textos de skills con prefijo `/wf:` · small
 - **[plugin]** `plantillas/.mcp.json` sin el servidor `db` · small
+- **[plugin]** Stash "README: R27 CodeGraph": ¿entra CodeGraph o se descarta? · small · `context/BACKLOG.md` (Next)
 - **[plugin]** Decidir si "la forma de responder" entra como `WF-R…` · small · `context/BACKLOG.md` (Next)
 
 <!-- Small items that can be done alongside the main one: seeds, one-line fixes,
@@ -38,11 +40,11 @@
 
 ## DONE (last 5)
 
+- [x] **20261028-1341** · El README explica cómo instalar el plugin, cómo clonar sin plugin y cómo mejorar el workflow desde un proyecto — `feature/readme-plugin` (2026-10-28)
 - [x] **decisión** · La plantilla para clonar se queda en este repo; los skills `plantilla:*` solo aparecen si se toca la plantilla y se ignoran — `chore/plantilla-se-queda` (2026-10-28)
 - [x] **20261028-0914** · La plantilla para clonar sin plugin se genera sola y un candado no deja commitearla desactualizada — `feature/generador-plantilla` (2026-10-28)
 - [x] **20261027-1451** · F2: las reglas del framework llegan por hook como índice corto; la plantilla queda solo con el proyecto — `feature/plugin-f2` (2026-10-28)
 - [x] **20261027-1327** · F1: el workflowIA es un plugin instalable; `/wf:setup` arma un proyecto de cero — `feature/plugin-f1` (2026-10-27)
-- [x] **20261027-1218** · F0 del plugin: las cuatro dudas probadas; fijar versión queda por canal — `context/verifications/2026-10-27-plugin-f0.md` (2026-10-27)
 
 <!-- - [x] **042** · One-line statement of what shipped — `TICKET-ID` (YYYY-MM-DD) -->
 

@@ -7,7 +7,7 @@ Tracking system to document development sessions.
 | ID | Branch | Status | Start | Description |
 |----|--------|--------|-------|-------------|
 
-<!-- Last session: 20261028-0914-generador-plantilla completed 2026-10-28 on branch feature/generador-plantilla -->
+<!-- Last session: 20261028-1341-readme-plugin completed 2026-10-28 on branch feature/readme-plugin -->
 
 ## Workflow
 
