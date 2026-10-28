@@ -56,11 +56,35 @@ plantillas/                      # copied ONCE into each project
     ├── .mcp.json  gitignore
     ├── context/                 # ROUTE, BACKLOG, ROADMAP, FIXES, ENVIRONMENT, README, archive/…
     └── git-hooks/               # → scripts/hooks/ in the project
+plantilla/                       # GENERATED: the no-plugin copy (see below). Never edited by hand
+scripts/armar-plantilla.sh       # generates plantilla/ from the plugin
+.githooks/                       # this repo's own git hooks: plantillas/git-hooks + the plantilla lock
 ```
 
 Anything at the repository root that Claude Code recognises as a plugin component travels to every
 project (`.mcp.json` did, until it moved to `plantillas/`). Run `claude plugin validate .` before
 adding one.
+
+## Without the Plugin: `plantilla/`
+
+For whoever does not want to depend on the plugin, `plantilla/` is a project ready to clone with
+everything copied in:
+
+```
+npx degit brujoh88/workflowIA/plantilla my-project
+cd my-project && git init && claude        # then: /setup
+```
+
+What changes against the plugin: commands have no prefix (`/start`, not `/wf:start`); skills and
+agents live in `.claude/skills/` and `.claude/agents/`; the framework (rules, hook scripts, docs,
+`context-lock`) lives in `.claude/wf/`; the Claude Code hooks are declared in `.claude/settings.json`.
+The rules arrive the same way — `claude-reglas.sh` injects the index on every session start. A
+cloned project does not get updates: to follow new versions, move it to the plugin.
+
+**It is generated, never edited.** `scripts/armar-plantilla.sh` builds it from the plugin. This
+repo's `pre-commit` (`.githooks/`, enabled with `git config core.hooksPath .githooks`) regenerates
+it into a temporary folder and **blocks the commit** if `plantilla/` differs or is not fully staged.
+After touching a skill, agent, script, rule or template: `scripts/armar-plantilla.sh && git add plantilla/`.
 
 ## Configuration Architecture (a project using the plugin)
 

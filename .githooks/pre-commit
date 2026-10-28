@@ -1,0 +1,37 @@
+#!/bin/bash
+# pre-commit de ESTE repo (no viaja a los proyectos): los chequeos de siempre + el candado de
+# plantilla/. Enganchado con: git config core.hooksPath .githooks
+#
+# El candado: plantilla/ se genera desde el plugin con scripts/armar-plantilla.sh. Si se tocó el
+# plugin sin regenerarla, o se editó la plantilla a mano, el commit no pasa.
+
+RAIZ="$(git rev-parse --show-toplevel)"
+
+"$RAIZ/plantillas/git-hooks/pre-commit" "$@" || exit 1
+
+echo "pre-commit: Checking plantilla/ matches the plugin..."
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+if ! "$RAIZ/scripts/armar-plantilla.sh" "$TMP/plantilla" >/dev/null; then
+  echo "pre-commit: scripts/armar-plantilla.sh falló; no puedo verificar plantilla/." >&2
+  exit 1
+fi
+
+if ! diff -rq "$TMP/plantilla" "$RAIZ/plantilla" >/dev/null 2>&1; then
+  echo "pre-commit: plantilla/ no coincide con lo que sale del plugin:" >&2
+  diff -rq "$TMP/plantilla" "$RAIZ/plantilla" 2>&1 | sed "s#$TMP/##; s#$RAIZ/##; s/^/  /" | head -20 >&2
+  echo "  Regenerala y agregala: scripts/armar-plantilla.sh && git add plantilla/" >&2
+  exit 1
+fi
+
+# Lo que se commitea es el índice: la plantilla al día tiene que estar agregada entera
+SUELTOS=$( { git diff --name-only -- plantilla/; git ls-files --others --exclude-standard -- plantilla/; } )
+if [ -n "$SUELTOS" ]; then
+  echo "pre-commit: plantilla/ está regenerada pero sin agregar al commit:" >&2
+  echo "$SUELTOS" | head -10 | sed 's/^/  /' >&2
+  echo "  git add plantilla/" >&2
+  exit 1
+fi
+
+exit 0

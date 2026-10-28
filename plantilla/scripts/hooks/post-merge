@@ -1,0 +1,25 @@
+#!/bin/sh
+# post-merge hook: imports Engram memories after git pull/merge.
+# Location: scripts/hooks/post-merge (versioned)
+# Enable: git config core.hooksPath scripts/hooks
+#
+# No-op unless memory.engram.enabled is true AND the engram binary is installed.
+# Never fails the merge.
+
+CONFIG_FILE=".claude/project.config.json"
+ENABLED="false"
+IMPORT_ON_MERGE="true"
+if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
+  ENABLED=$(jq -r '.memory.engram.enabled // false' "$CONFIG_FILE" 2>/dev/null)
+  IMPORT_ON_MERGE=$(jq -r '.memory.engram.importOnMerge // true' "$CONFIG_FILE" 2>/dev/null)
+fi
+
+[ "$ENABLED" = "true" ] || exit 0
+[ "$IMPORT_ON_MERGE" = "true" ] || exit 0
+
+ENGRAM_BIN="${ENGRAM_BIN:-$(command -v engram 2>/dev/null)}"
+if [ -d ".engram/chunks" ] && [ -n "$ENGRAM_BIN" ] && [ -x "$ENGRAM_BIN" ]; then
+  "$ENGRAM_BIN" sync --import >/dev/null 2>&1 && echo "post-merge: Engram memories imported"
+fi
+
+exit 0

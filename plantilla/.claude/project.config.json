@@ -1,0 +1,131 @@
+{
+  "project": {
+    "name": "[NOMBRE]",
+    "description": "[Descripción breve de la aplicación]",
+    "stack": "[Backend/Frontend/DB]"
+  },
+  "language": {
+    "code": "en",
+    "chat": "es"
+  },
+  "commands": {
+    "packageManager": "npm",
+    "test": "npm test",
+    "coverage": "",
+    "lint": "npm run lint",
+    "dev": "npm run dev",
+    "build": "npm run build",
+    "syncTypes": ""
+  },
+  "git": {
+    "branchPrefixes": {
+      "feature": "feature/",
+      "fix": "fix/",
+      "hotfix": "hotfix/"
+    },
+    "mainBranch": "main",
+    "devBranch": "",
+    "coAuthoredBy": false,
+    "allowCommitsOnMain": true
+  },
+  "conventions": {
+    "files": "kebab-case",
+    "classes": "PascalCase",
+    "functions": "camelCase",
+    "constants": "UPPER_SNAKE_CASE",
+    "commits": "conventional"
+  },
+  "structure": {
+    "src": "src/",
+    "tests": "tests/",
+    "docs": "docs/"
+  },
+  "workflow": {
+    "maxFileLines": {
+      "default": 400,
+      "services": 500,
+      "components": 300,
+      "hooks": 150
+    },
+    "maxFunctionLines": 50,
+    "archiveRotationThreshold": 15,
+    "blockRotationThreshold": 3,
+    "preImplementationChecklist": true,
+    "roadmapEnabled": true,
+    "backlogMaxLines": 300,
+    "recentSessionsToKeep": 3,
+    "coverageThreshold": 80,
+    "staleSessionThreshold": 24,
+    "testMaxWorkers": 2
+  },
+  "truth": {
+    "enabled": true,
+    "authority": [],
+    "homes": [
+      "src/domain/*",
+      "*/src/*/domain/*",
+      "*/src/domain/*"
+    ],
+    "scope": [
+      "src",
+      "app",
+      "apps",
+      "backend",
+      "frontend"
+    ],
+    "testScope": [],
+    "testPattern": [
+      ".spec.",
+      ".test.",
+      "/test/",
+      "/tests/",
+      "/__tests__/"
+    ],
+    "extensions": [
+      "ts",
+      "tsx"
+    ],
+    "exclude": [
+      "/generated/",
+      "/__generated__/",
+      "/node_modules/",
+      "/dist/",
+      "/coverage/",
+      "/migrations/"
+    ],
+    "inventory": "scripts/hooks/verdad-repartida-aceptada.txt",
+    "minValues": 2,
+    "minValuesInTests": 2,
+    "rule": "",
+    "help": []
+  },
+  "quality": {
+    "externalSkills": []
+  },
+  "docker": {
+    "enabled": false,
+    "dbContainer": ""
+  },
+  "memory": {
+    "engram": {
+      "enabled": false,
+      "syncOnCommit": true,
+      "importOnMerge": true
+    }
+  },
+  "parallel": {
+    "enabled": true,
+    "lockTimeoutSeconds": 60,
+    "lockFile": "context/.context.lock",
+    "sharedBranch": {
+      "enabled": true,
+      "directory": "context/.parallel",
+      "atomicCommits": true
+    }
+  },
+  "mcp": {
+    "installed": [],
+    "suggested": []
+  },
+  "initialized": false
+}

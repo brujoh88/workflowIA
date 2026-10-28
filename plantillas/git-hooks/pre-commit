@@ -93,11 +93,12 @@ for file in $(git diff --cached --name-only --diff-filter=ACM); do
 
     # Determine file type and apply specific limit
     case "$file" in
-      scripts/hooks/*)
+      scripts/hooks/*|*/scripts/hooks/*)
         # Git hooks are shell scripts, not React custom hooks. The 150-line limit
         # below is meant for `useSomething.ts`; this folder only matches `*/hooks/*`
         # by name. Left unhandled, pre-commit blocks itself the moment a hook grows
-        # past 150 lines — which is exactly what happened.
+        # past 150 lines — which is exactly what happened. The second pattern covers
+        # a copy one level down (workflowIA's generated plantilla/scripts/hooks/).
         MAX_LIMIT=$MAX_DEFAULT
         ;;
       *.service.ts|*.service.js)

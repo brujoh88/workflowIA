@@ -1,0 +1,47 @@
+#!/bin/sh
+# post-commit hook: Auto-register commits in context/.pending-commits.log
+# Format: STATUS|DATE|HASH|BRANCH|MESSAGE
+#
+# Setup: git config core.hooksPath scripts/hooks
+
+LOG_FILE="context/.pending-commits.log"
+
+# Get commit info
+HASH=$(git log -1 --format="%h")
+BRANCH=$(git branch --show-current)
+MESSAGE=$(git log -1 --format="%s")
+DATE=$(date +"%Y-%m-%d %H:%M:%S")
+
+# Determine status: documentation commits are auto-marked DOCUMENTED
+# Anti-loop patterns: docs(context):, chore(session):, docs(session):, docs(session-XXX):
+if echo "$MESSAGE" | grep -qE "^(docs|chore)\((context|session-[0-9]+|session-[0-9]{8}T[0-9]{4}|session-[0-9]{8}-[0-9]{4})\): "; then
+    STATUS="DOCUMENTED"
+    MSG_EXTRA="(auto-documented)"
+else
+    STATUS="PENDING"
+    MSG_EXTRA=""
+fi
+
+# Ensure log file exists
+mkdir -p "$(dirname "$LOG_FILE")"
+
+# Append entry
+echo "${STATUS}|${DATE}|${HASH}|${BRANCH}|${MESSAGE}" >> "$LOG_FILE"
+
+# Visual feedback
+if [ "$STATUS" = "DOCUMENTED" ]; then
+    echo "post-commit: Commit registered [${BRANCH}] ${MSG_EXTRA}"
+else
+    echo "post-commit: Commit registered [${BRANCH}]"
+fi
+
+# Engram sync: export memories to versioned chunks so they travel with the repo.
+# No-op unless memory.engram.enabled is true AND the binary is installed.
+CONFIG_FILE=".claude/project.config.json"
+if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_FILE" ]; then
+    ENGRAM_ENABLED=$(jq -r '.memory.engram.enabled // false' "$CONFIG_FILE" 2>/dev/null)
+    ENGRAM_SYNC=$(jq -r '.memory.engram.syncOnCommit // true' "$CONFIG_FILE" 2>/dev/null)
+    if [ "$ENGRAM_ENABLED" = "true" ] && [ "$ENGRAM_SYNC" = "true" ] && command -v engram >/dev/null 2>&1; then
+        engram sync >/dev/null 2>&1 || true
+    fi
+fi

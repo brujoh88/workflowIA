@@ -12,6 +12,9 @@ mismo: sus sesiones, ruta y backlog viven en `context/`, como en cualquier proye
 - `plantillas/` es lo que `/wf:setup` copia **una vez** a cada proyecto (con `wf-plantillas`).
   `context/`, `.claude/project.config.json` y `.claude/MEMORY.md` de la raíz son **de este repo**,
   no plantillas: no se editan pensando en los proyectos.
+- `plantilla/` (sin "s") es la copia para clonar sin plugin y **se genera, nunca se edita**:
+  `scripts/armar-plantilla.sh && git add plantilla/` después de tocar el plugin. El pre-commit de
+  este repo vive en `.githooks/` (`git config core.hooksPath .githooks`) y corta si quedó distinta.
 - Archivos de proyecto en la raíz del repo viajan con el plugin si Claude Code los reconoce
   (pasó con `.mcp.json`): antes de agregar uno, `claude plugin validate .`.
 - Plan vigente: `.claude/plan/2026-10-27-workflow-como-plugin.md`.

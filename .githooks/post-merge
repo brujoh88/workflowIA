@@ -1,0 +1,3 @@
+#!/bin/bash
+# Hook de este repo: delega en el de plantillas/ (el pre-commit además lleva el candado de plantilla/).
+exec "$(git rev-parse --show-toplevel)/plantillas/git-hooks/post-merge" "$@"
